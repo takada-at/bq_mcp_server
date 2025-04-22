@@ -1,15 +1,16 @@
 # main.py: FastAPI application entry point
 import logging
-from typing import List, Optional
+from typing import List, Optional, Literal
 
 from fastapi import FastAPI, HTTPException, Query, Path as FastApiPath
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from bq_meta_api import cache_manager, search_engine
 from bq_meta_api.config import settings
 from bq_meta_api.models import (
     DatasetListResponse, TableListResponse, SearchResponse,
-    DatasetMetadata, TableMetadata, SearchResultItem, CachedData
+    DatasetMetadata, TableMetadata, SearchResultItem, CachedData,
+    MarkdownTableListResponse
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -76,14 +77,26 @@ async def get_datasets():
 
 @app.get(
     "/{dataset_id}/tables",
-    response_model=TableListResponse,
+    responses={
+        200: {
+            "content": {
+                "application/json": {
+                    "model": TableListResponse
+                },
+                "text/markdown": {
+                    "example": "### Table: `prj-example.example_dataset.users`\n\n| カラム名 | データ型 | モード | 説明 |\n|---------|---------|--------|------|\n| user_id | INTEGER | REQUIRED | ユーザーの一意識別子 |\n| name | STRING | NULLABLE | ユーザー名 |\n| created_at | TIMESTAMP | REQUIRED | 作成日時 |"
+                }
+            }
+        }
+    },
     summary="Get list of tables in a dataset",
-    description="Returns a list of tables (metadata only, without schema) for the specified dataset ID from the cache. Searches across all configured projects.",
+    description="Returns a list of tables for the specified dataset ID from the cache. Searches across all configured projects. Format can be either 'json' or 'markdown'.",
 )
 async def get_tables_in_dataset(
-    dataset_id: str = FastApiPath(..., description="The ID of the dataset to retrieve tables for.")
+    dataset_id: str = FastApiPath(..., description="The ID of the dataset to retrieve tables for."),
+    format: Optional[Literal["json", "markdown"]] = Query("json", description="Response format: 'json' or 'markdown'.")
 ):
-    """指定されたデータセットIDに属するテーブル一覧（スキーマなし）を返す"""
+    """指定されたデータセットIDに属するテーブル一覧を返す"""
     try:
         cache = get_current_cache()
         found_tables: List[TableMetadata] = []
@@ -91,18 +104,27 @@ async def get_tables_in_dataset(
         for project_id, datasets_tables in cache.tables.items():
             if dataset_id in datasets_tables:
                 found_dataset = True
-                # スキーマ情報を含まないTableMetadataを作成して返す
+                # テーブル一覧とスキーマ情報を取得
                 for table_meta_with_schema in datasets_tables[dataset_id]:
-                    # schemaを除外して新しいインスタンスを作成
-                    table_meta_dict = table_meta_with_schema.model_dump(exclude={'schema_'}) # schemaエイリアスも考慮
-                    # Pydantic v2では model_validate を使用
-                    found_tables.append(TableMetadata.model_validate(table_meta_dict))
-                break # 最初に見つかったプロジェクトのデータセットを使用
+                    if format == "json":
+                        # JSONフォーマットの場合は、スキーマを除外して新しいインスタンスを作成
+                        table_meta_dict = table_meta_with_schema.model_dump(exclude={'schema_'})
+                        found_tables.append(TableMetadata.model_validate(table_meta_dict))
+                    else:
+                        # マークダウンフォーマットの場合は、スキーマ情報を含めて完全なテーブルメタデータを使用
+                        found_tables.append(table_meta_with_schema)
+                break  # 最初に見つかったプロジェクトのデータセットを使用
 
         if not found_dataset:
             raise HTTPException(status_code=404, detail=f"データセット '{dataset_id}' がキャッシュ内に見つかりません。")
 
-        return TableListResponse(tables=found_tables)
+        if format == "markdown":
+            # マークダウン形式のレスポンスを生成
+            markdown_content = MarkdownTableListResponse.to_markdown(found_tables)
+            return Response(content=markdown_content, media_type="text/markdown")
+        else:
+            # JSON形式のレスポンスを生成
+            return TableListResponse(tables=found_tables)
     except HTTPException as e:
         raise e
     except Exception as e:

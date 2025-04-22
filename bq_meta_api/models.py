@@ -1,7 +1,8 @@
 # models.py: Defines Pydantic models for data structures and API responses
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field
 import datetime
+# 循環インポートを修正: MarkdownConverterのインポートを削除
 
 class ColumnSchema(BaseModel):
     """BigQueryテーブルのカラムスキーマを表すモデル"""
@@ -46,6 +47,18 @@ class DatasetListResponse(BaseModel):
 class TableListResponse(BaseModel):
     """/<dataset>/tables エンドポイントのレスポンスモデル"""
     tables: List[TableMetadata] = Field(..., description="テーブルメタデータのリスト") # スキーマは含まない簡易版
+
+class MarkdownTableListResponse(BaseModel):
+    """マークダウン形式のテーブル一覧レスポンスモデル"""
+    content: str = Field(..., description="マークダウン形式のテーブル情報")
+
+    @classmethod
+    def to_markdown(cls, tables: List[TableMetadata]) -> str:
+        """テーブルメタデータリストをマークダウン形式に変換する"""
+        # 循環参照を避けるためにインポートをここで実行
+        from bq_meta_api.converter import MarkdownConverter
+        # 新しいMarkdownConverterを使用してネスト対応のマークダウンを生成する
+        return MarkdownConverter.convert_tables_to_markdown(tables)
 
 class SearchResultItem(BaseModel):
     """検索結果のアイテム"""
