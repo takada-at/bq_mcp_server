@@ -1,4 +1,5 @@
 .env
+bq_metadata_cache.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

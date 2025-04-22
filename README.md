@@ -103,12 +103,19 @@ uvicorn bq_meta_api.main:app --host <your_host> --port <your_port> --reload
 *   **GET /datasets**:
     *   キャッシュされている全てのプロジェクトのデータセットメタデータリストを返します。
 *   **GET /{dataset_id}/tables**:
-    *   指定された `dataset_id` に一致するテーブルのメタデータリスト（スキーマ情報は含まない）を返します。キャッシュ内の全プロジェクトから検索されます。
+    *   指定された `dataset_id` に一致するテーブルのメタデータを返します。キャッシュ内の全プロジェクトから検索されます。
+    *   クエリパラメータ `format` で応答形式を指定できます：
+        * `format=json`: テーブルのメタデータリストをJSON形式で返します（スキーマ情報は含まない）。
+        * `format=markdown`: テーブルとそのスキーマ情報をMarkdown形式で返します（デフォルト）。
 *   **GET /search?key={keyword}**:
     *   `keyword` を使用して、キャッシュ内のデータセット名、テーブル名、カラム名、およびそれらの説明を検索します。
+    *   クエリパラメータ `format` で応答形式を指定できます：
+        * `format=json`: 検索結果をJSON形式で返します。
+        * `format=markdown`: 検索結果を読みやすいMarkdown形式で返します。
 *   **POST /cache/update**:
     *   BigQueryから最新のメタデータを取得し、ローカルキャッシュを強制的に更新します。
+    *   更新が成功すると、ステータスコード200と最終更新日時を返します。
 
 ## 設計
 
-詳細な設計については `design.md` を参照してください。
+詳細な設計については `design.md` を参照してください.

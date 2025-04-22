@@ -10,6 +10,7 @@ from bq_meta_api.models import DatasetMetadata, TableMetadata, TableSchema, Colu
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def get_bigquery_client() -> Optional[bigquery.Client]:
     """
     BigQueryクライアントを初期化して返します。
@@ -21,10 +22,14 @@ def get_bigquery_client() -> Optional[bigquery.Client]:
     """
     try:
         if settings.gcp_service_account_key_path:
-            logger.info(f"サービスアカウントキーを使用して認証します: {settings.gcp_service_account_key_path}")
+            logger.info(
+                f"サービスアカウントキーを使用して認証します: {settings.gcp_service_account_key_path}"
+            )
             credentials = service_account.Credentials.from_service_account_file(
                 settings.gcp_service_account_key_path,
-                scopes=["https://www.googleapis.com/auth/cloud-platform"], # 必要なスコープを指定
+                scopes=[
+                    "https://www.googleapis.com/auth/cloud-platform"
+                ],  # 必要なスコープを指定
             )
             # credentials.project_id を使うとキーファイル内のプロジェクトIDに固定されるため、
             # client生成時に project を指定しないことで、リクエストごとにプロジェクトを指定できるようにする
@@ -33,32 +38,45 @@ def get_bigquery_client() -> Optional[bigquery.Client]:
             logger.info("Application Default Credentials (ADC) を使用して認証します。")
             # ADCの場合、デフォルトプロジェクトが設定される可能性があるが、
             # list_datasets などで project パラメータを指定すればオーバーライド可能
-            client = bigquery.Client()
+            client = bigquery.Client(
+                project=settings.project_ids[0]
+            )  # 最初のプロジェクトIDを使用
 
         # 簡単な接続テスト（例：プロジェクトリスト取得など、軽い操作）
         # client.list_projects(max_results=1) # これは権限が必要な場合がある
-        logger.info(f"BigQueryクライアントの初期化に成功しました。デフォルトプロジェクト: {client.project}")
+        logger.info(
+            f"BigQueryクライアントの初期化に成功しました。デフォルトプロジェクト: {client.project}"
+        )
         return client
     except FileNotFoundError:
-        logger.error(f"サービスアカウントキーファイルが見つかりません: {settings.gcp_service_account_key_path}")
+        logger.error(
+            f"サービスアカウントキーファイルが見つかりません: {settings.gcp_service_account_key_path}"
+        )
         return None
     except DefaultCredentialsError as e:
         print(e)
-        logger.error("Application Default Credentials (ADC) が見つかりません。gcloud auth application-default login を実行するか、サービスアカウントキーを設定してください。")
+        logger.error(
+            "Application Default Credentials (ADC) が見つかりません。gcloud auth application-default login を実行するか、サービスアカウントキーを設定してください。"
+        )
         return None
     except RefreshError as e:
         logger.error(f"認証情報の更新に失敗しました: {e}")
         return None
     except Exception as e:
-        logger.error(f"BigQueryクライアントの初期化中に予期せぬエラーが発生しました: {e}")
+        logger.error(
+            f"BigQueryクライアントの初期化中に予期せぬエラーが発生しました: {e}"
+        )
         return None
+
 
 def fetch_datasets(client: bigquery.Client, project_id: str) -> List[DatasetMetadata]:
     """指定されたプロジェクトのデータセット一覧を取得します。"""
     datasets_metadata = []
     try:
-        datasets = list(client.list_datasets(project=project_id)) # プロジェクトを指定
-        logger.info(f"プロジェクト '{project_id}' から {len(datasets)} 個のデータセットを取得しました。")
+        datasets = list(client.list_datasets(project=project_id))  # プロジェクトを指定
+        logger.info(
+            f"プロジェクト '{project_id}' から {len(datasets)} 個のデータセットを取得しました。"
+        )
         for dataset in datasets:
             # データセットの詳細情報を取得（説明など）
             try:
@@ -71,44 +89,54 @@ def fetch_datasets(client: bigquery.Client, project_id: str) -> List[DatasetMeta
                 )
                 datasets_metadata.append(metadata)
             except Exception as e:
-                 logger.warning(f"データセット '{project_id}.{dataset.dataset_id}' の詳細取得中にエラー: {e}")
-                 # 詳細が取れなくても基本的な情報は追加
-                 metadata = DatasetMetadata(
+                logger.warning(
+                    f"データセット '{project_id}.{dataset.dataset_id}' の詳細取得中にエラー: {e}"
+                )
+                # 詳細が取れなくても基本的な情報は追加
+                metadata = DatasetMetadata(
                     project_id=project_id,
                     dataset_id=dataset.dataset_id,
-                 )
-                 datasets_metadata.append(metadata)
+                )
+                datasets_metadata.append(metadata)
 
     except Exception as e:
         logger.error(f"プロジェクト '{project_id}' のデータセット取得中にエラー: {e}")
     return datasets_metadata
+
 
 def _parse_schema(schema_fields: List[bigquery.SchemaField]) -> List[ColumnSchema]:
     """BigQueryのスキーマフィールドリストをColumnSchemaのリストに変換します。"""
     columns = []
     for field in schema_fields:
         nested_fields = None
-        if field.field_type == 'RECORD' or field.field_type == 'STRUCT':
-             # ネストされたフィールドがある場合、再帰的に処理
-             if field.fields:
-                 nested_fields = _parse_schema(field.fields)
+        if field.field_type == "RECORD" or field.field_type == "STRUCT":
+            # ネストされたフィールドがある場合、再帰的に処理
+            if field.fields:
+                nested_fields = _parse_schema(field.fields)
 
-        columns.append(ColumnSchema(
-            name=field.name,
-            type=field.field_type,
-            mode=field.mode,
-            description=field.description,
-            fields=nested_fields
-        ))
+        columns.append(
+            ColumnSchema(
+                name=field.name,
+                type=field.field_type,
+                mode=field.mode,
+                description=field.description,
+                fields=nested_fields,
+            )
+        )
     return columns
 
-def fetch_tables_and_schemas(client: bigquery.Client, project_id: str, dataset_id: str) -> List[TableMetadata]:
+
+def fetch_tables_and_schemas(
+    client: bigquery.Client, project_id: str, dataset_id: str
+) -> List[TableMetadata]:
     """指定されたデータセットのテーブル一覧と各テーブルのスキーマを取得します。"""
     tables_metadata = []
     dataset_ref = client.dataset(dataset_id, project=project_id)
     try:
         tables = list(client.list_tables(dataset_ref))
-        logger.info(f"データセット '{project_id}.{dataset_id}' から {len(tables)} 個のテーブルを取得しました。")
+        logger.info(
+            f"データセット '{project_id}.{dataset_id}' から {len(tables)} 個のテーブルを取得しました。"
+        )
         for table_item in tables:
             full_table_id = f"{project_id}.{dataset_id}.{table_item.table_id}"
             try:
@@ -125,7 +153,7 @@ def fetch_tables_and_schemas(client: bigquery.Client, project_id: str, dataset_i
                     dataset_id=table.dataset_id,
                     table_id=table.table_id,
                     full_table_id=full_table_id,
-                    schema=schema_model, # schema_のエイリアス
+                    schema=schema_model,  # schema_のエイリアス
                     description=table.description,
                     num_rows=table.num_rows,
                     num_bytes=table.num_bytes,
@@ -145,8 +173,11 @@ def fetch_tables_and_schemas(client: bigquery.Client, project_id: str, dataset_i
                 tables_metadata.append(metadata)
 
     except Exception as e:
-        logger.error(f"データセット '{project_id}.{dataset_id}' のテーブル取得中にエラー: {e}")
+        logger.error(
+            f"データセット '{project_id}.{dataset_id}' のテーブル取得中にエラー: {e}"
+        )
     return tables_metadata
+
 
 # --- テスト用コード ---
 if __name__ == "__main__":
@@ -158,27 +189,39 @@ if __name__ == "__main__":
         datasets = fetch_datasets(client, test_project_id)
         if datasets:
             for ds in datasets:
-                print(f"- {ds.project_id}.{ds.dataset_id} (Location: {ds.location}, Desc: {ds.description})")
+                print(
+                    f"- {ds.project_id}.{ds.dataset_id} (Location: {ds.location}, Desc: {ds.description})"
+                )
 
-            test_dataset_id = datasets[0].dataset_id # 最初のデータセットでテスト
-            print(f"\n--- テーブル一覧とスキーマ ({test_project_id}.{test_dataset_id}) ---")
+            test_dataset_id = datasets[0].dataset_id  # 最初のデータセットでテスト
+            print(
+                f"\n--- テーブル一覧とスキーマ ({test_project_id}.{test_dataset_id}) ---"
+            )
             tables = fetch_tables_and_schemas(client, test_project_id, test_dataset_id)
             for tbl in tables:
                 print(f"\nTable: {tbl.full_table_id}")
                 print(f"  Description: {tbl.description}")
                 print(f"  Rows: {tbl.num_rows}, Bytes: {tbl.num_bytes}")
-                print(f"  Created: {tbl.created_time}, Modified: {tbl.last_modified_time}")
+                print(
+                    f"  Created: {tbl.created_time}, Modified: {tbl.last_modified_time}"
+                )
                 if tbl.schema_:
                     print("  Schema:")
                     for col in tbl.schema_.columns:
-                        print(f"    - {col.name} ({col.type}, {col.mode}) {col.description or ''}")
+                        print(
+                            f"    - {col.name} ({col.type}, {col.mode}) {col.description or ''}"
+                        )
                         if col.fields:
-                             print(f"      Nested Fields:")
-                             for nested_col in col.fields:
-                                 print(f"        - {nested_col.name} ({nested_col.type}, {nested_col.mode})")
+                            print(f"      Nested Fields:")
+                            for nested_col in col.fields:
+                                print(
+                                    f"        - {nested_col.name} ({nested_col.type}, {nested_col.mode})"
+                                )
 
         else:
-            print(f"プロジェクト '{test_project_id}' でデータセットが見つかりませんでした。")
+            print(
+                f"プロジェクト '{test_project_id}' でデータセットが見つかりませんでした。"
+            )
     elif not client:
         print("BigQueryクライアントの初期化に失敗しました。")
     elif not settings.project_ids:
