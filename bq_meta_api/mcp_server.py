@@ -1,6 +1,5 @@
 from mcp.server.fastmcp import FastMCP
 from typing import Optional
-from bq_meta_api import converter, log, logic, search_engine
 
 
 mcp = FastMCP(
@@ -10,7 +9,9 @@ mcp = FastMCP(
 Use get_datasets to retrieve a list of datasets and get_tables to retrieve a list of tables.""",
     version="0.1.0",
 )
+from bq_meta_api import log
 log.init_logger(log_to_console=False)
+from bq_meta_api import converter, logic, search_engine
 
 
 @mcp.tool("get_datasets")
@@ -41,3 +42,7 @@ def search_metadata(key: str):
     results = search_engine.search_metadata(key)
     markdown_content = converter.convert_search_results_to_markdown(key, results)
     return markdown_content
+
+
+if __name__ == "__main__":
+    mcp.run()

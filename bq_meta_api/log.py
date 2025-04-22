@@ -25,5 +25,6 @@ def init_logger(log_to_console: bool = True):
             file_handler = logging.FileHandler(log_file)
             file_handler.setFormatter(formatter)
             logger = logging.getLogger("bq_meta_api")
+            logger.propagate = False
             logger.addHandler(file_handler)
     logger.info("Logger initialized.")
