@@ -1,8 +1,8 @@
 # search_engine.py: Provides search functionality over cached metadata
 import logging
 from typing import List, Optional
-from . import cache_manager
-from .models import CachedData, SearchResultItem, ColumnSchema
+from bq_meta_api import cache_manager
+from bq_meta_api.models import CachedData, SearchResultItem, ColumnSchema
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

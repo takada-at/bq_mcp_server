@@ -4,8 +4,8 @@ from typing import List, Optional, Tuple
 from google.cloud import bigquery
 from google.oauth2 import service_account
 from google.auth.exceptions import DefaultCredentialsError, RefreshError
-from .config import settings
-from .models import DatasetMetadata, TableMetadata, TableSchema, ColumnSchema
+from bq_meta_api.config import settings
+from bq_meta_api.models import DatasetMetadata, TableMetadata, TableSchema, ColumnSchema
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,7 +42,8 @@ def get_bigquery_client() -> Optional[bigquery.Client]:
     except FileNotFoundError:
         logger.error(f"サービスアカウントキーファイルが見つかりません: {settings.gcp_service_account_key_path}")
         return None
-    except DefaultCredentialsError:
+    except DefaultCredentialsError as e:
+        print(e)
         logger.error("Application Default Credentials (ADC) が見つかりません。gcloud auth application-default login を実行するか、サービスアカウントキーを設定してください。")
         return None
     except RefreshError as e:

@@ -5,9 +5,9 @@ from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Query, Path as FastApiPath
 from fastapi.responses import JSONResponse
 
-from . import cache_manager, search_engine
-from .config import settings
-from .models import (
+from bq_meta_api import cache_manager, search_engine
+from bq_meta_api.config import settings
+from bq_meta_api.models import (
     DatasetListResponse, TableListResponse, SearchResponse,
     DatasetMetadata, TableMetadata, SearchResultItem, CachedData
 )

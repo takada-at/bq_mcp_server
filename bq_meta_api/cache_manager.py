@@ -4,9 +4,9 @@ import json
 import datetime
 from pathlib import Path
 from typing import Optional, Dict, List
-from .config import settings
-from .models import CachedData, DatasetMetadata, TableMetadata
-from . import bigquery_client # bigquery_clientモジュールをインポート
+from bq_meta_api.config import settings
+from bq_meta_api.models import CachedData, DatasetMetadata, TableMetadata
+from bq_meta_api import bigquery_client # bigquery_clientモジュールをインポート
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -1,8 +1,11 @@
 # config.py: Manages application configuration settings
 import os
 from typing import List, Optional
-from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Annotated
+
 
 # .env ファイルを読み込む
 load_dotenv()
@@ -25,6 +28,12 @@ class Settings(BaseSettings):
         # .env ファイルが存在する場合、そちらを優先する
         env_file = '.env'
         env_file_encoding = 'utf-8'
+        enable_decoding = False
+
+    @field_validator('project_ids', mode='before')
+    @classmethod
+    def decode_project_ids(cls, v: str) -> list[int]:
+        return [x.strip() for x in v.split(',')]
 
 # 設定インスタンスを作成
 settings = Settings()
