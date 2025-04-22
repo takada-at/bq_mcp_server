@@ -4,11 +4,12 @@ from typing import List, Optional, Tuple
 from google.cloud import bigquery
 from google.oauth2 import service_account
 from google.auth.exceptions import DefaultCredentialsError, RefreshError
+from bq_meta_api import log
 from bq_meta_api.config import settings
 from bq_meta_api.models import DatasetMetadata, TableMetadata, TableSchema, ColumnSchema
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+
+logger = log.logger
 
 
 def get_bigquery_client() -> Optional[bigquery.Client]:
@@ -54,7 +55,7 @@ def get_bigquery_client() -> Optional[bigquery.Client]:
         )
         return None
     except DefaultCredentialsError as e:
-        print(e)
+        logger.exception(e)
         logger.error(
             "Application Default Credentials (ADC) が見つかりません。gcloud auth application-default login を実行するか、サービスアカウントキーを設定してください。"
         )
@@ -181,48 +182,48 @@ def fetch_tables_and_schemas(
 
 # --- テスト用コード ---
 if __name__ == "__main__":
-    print("BigQuery Client テスト実行...")
+    logger.info("BigQuery Client テスト実行...")
     client = get_bigquery_client()
     if client and settings.project_ids:
         test_project_id = settings.project_ids[0]
-        print(f"\n--- データセット一覧 ({test_project_id}) ---")
+        logger.info(f"\n--- データセット一覧 ({test_project_id}) ---")
         datasets = fetch_datasets(client, test_project_id)
         if datasets:
             for ds in datasets:
-                print(
+                logger.info(
                     f"- {ds.project_id}.{ds.dataset_id} (Location: {ds.location}, Desc: {ds.description})"
                 )
 
             test_dataset_id = datasets[0].dataset_id  # 最初のデータセットでテスト
-            print(
+            logger.info(
                 f"\n--- テーブル一覧とスキーマ ({test_project_id}.{test_dataset_id}) ---"
             )
             tables = fetch_tables_and_schemas(client, test_project_id, test_dataset_id)
             for tbl in tables:
-                print(f"\nTable: {tbl.full_table_id}")
-                print(f"  Description: {tbl.description}")
-                print(f"  Rows: {tbl.num_rows}, Bytes: {tbl.num_bytes}")
-                print(
+                logger.info(f"\nTable: {tbl.full_table_id}")
+                logger.info(f"  Description: {tbl.description}")
+                logger.info(f"  Rows: {tbl.num_rows}, Bytes: {tbl.num_bytes}")
+                logger.info(
                     f"  Created: {tbl.created_time}, Modified: {tbl.last_modified_time}"
                 )
                 if tbl.schema_:
-                    print("  Schema:")
+                    logger.info("  Schema:")
                     for col in tbl.schema_.columns:
-                        print(
+                        logger.info(
                             f"    - {col.name} ({col.type}, {col.mode}) {col.description or ''}"
                         )
                         if col.fields:
-                            print(f"      Nested Fields:")
+                            logger.info(f"      Nested Fields:")
                             for nested_col in col.fields:
-                                print(
+                                logger.info(
                                     f"        - {nested_col.name} ({nested_col.type}, {nested_col.mode})"
                                 )
 
         else:
-            print(
+            logger.info(
                 f"プロジェクト '{test_project_id}' でデータセットが見つかりませんでした。"
             )
     elif not client:
-        print("BigQueryクライアントの初期化に失敗しました。")
+        logger.info("BigQueryクライアントの初期化に失敗しました。")
     elif not settings.project_ids:
-        print("テスト対象のプロジェクトIDが設定されていません。")
+        logger.info("テスト対象のプロジェクトIDが設定されていません。")

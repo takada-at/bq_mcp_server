@@ -1,17 +1,15 @@
 # search_engine.py: Provides search functionality over cached metadata
 import logging
-from typing import List, Optional, Union
-from bq_meta_api import cache_manager
+from typing import List, Optional
+from bq_meta_api import cache_manager, log
 from bq_meta_api.models import (
     CachedData,
     SearchResultItem,
     ColumnSchema,
     SearchResponse,
-    MarkdownSearchResponse,
 )
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = log.logger
 
 
 def _search_columns(
@@ -87,11 +85,6 @@ def search_metadata(keyword: str) -> List[SearchResultItem]:
 
     if not cached_data:
         logger.warning("検索対象のキャッシュデータがありません。")
-        # 形式に応じたレスポンスを返す
-        if format == "markdown":
-            return MarkdownSearchResponse.from_search_results(keyword, [])
-        elif format == "json":
-            return SearchResponse(query=keyword, results=[])
         return results
 
     lower_keyword = keyword.lower()

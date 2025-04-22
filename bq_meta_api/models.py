@@ -74,21 +74,6 @@ class TableListResponse(BaseModel):
     )  # スキーマは含まない簡易版
 
 
-class MarkdownTableListResponse(BaseModel):
-    """マークダウン形式のテーブル一覧レスポンスモデル"""
-
-    content: str = Field(..., description="マークダウン形式のテーブル情報")
-
-    @classmethod
-    def to_markdown(cls, tables: List[TableMetadata]) -> str:
-        """テーブルメタデータリストをマークダウン形式に変換する"""
-        # 循環参照を避けるためにインポートをここで実行
-        from bq_meta_api.converter import MarkdownConverter
-
-        # 新しいMarkdownConverterを使用してネスト対応のマークダウンを生成する
-        return MarkdownConverter.convert_tables_to_markdown(tables)
-
-
 class SearchResultItem(BaseModel):
     """検索結果のアイテム"""
 
@@ -108,24 +93,6 @@ class SearchResponse(BaseModel):
 
     query: str = Field(..., description="実行された検索キーワード")
     results: List[SearchResultItem] = Field(..., description="検索結果リスト")
-
-
-class MarkdownSearchResponse(BaseModel):
-    """/search エンドポイントのマークダウン形式のレスポンスモデル"""
-
-    query: str = Field(..., description="実行された検索キーワード")
-    content: str = Field(..., description="マークダウン形式の検索結果")
-
-    @classmethod
-    def from_search_results(
-        cls, query: str, results: List[SearchResultItem]
-    ) -> "MarkdownSearchResponse":
-        """検索結果からマークダウン形式のレスポンスを生成する"""
-        # 循環参照を避けるためにここでインポート
-        from bq_meta_api.converter import MarkdownConverter
-
-        content = MarkdownConverter.convert_search_results_to_markdown(query, results)
-        return cls(query=query, content=content)
 
 
 # --- キャッシュ用データ構造 ---

@@ -1,15 +1,14 @@
 # cache_manager.py: Manages local caching of BigQuery metadata
-import logging
 import json
 import datetime
 from pathlib import Path
 from typing import Optional, Dict, List
 from bq_meta_api.config import settings
 from bq_meta_api.models import CachedData, DatasetMetadata, TableMetadata
-from bq_meta_api import bigquery_client  # bigquery_clientモジュールをインポート
+from bq_meta_api import bigquery_client, log
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+
+logger = log.logger
 
 CACHE_FILE = Path(settings.cache_file_path)
 CACHE_TTL = datetime.timedelta(seconds=settings.cache_ttl_seconds)
@@ -150,34 +149,34 @@ def get_cached_data() -> Optional[CachedData]:
 
 # --- テスト用コード ---
 if __name__ == "__main__":
-    print("Cache Manager テスト実行...")
+    logger.info("Cache Manager テスト実行...")
 
     # 1. キャッシュ取得（初回または期限切れの場合、更新が走るはず）
-    print("\n--- 1. キャッシュ取得/更新 ---")
+    logger.info("\n--- 1. キャッシュ取得/更新 ---")
     data = get_cached_data()
     if data:
-        print(f"キャッシュ取得成功。最終更新: {data.last_updated}")
-        print(
+        logger.info(f"キャッシュ取得成功。最終更新: {data.last_updated}")
+        logger.info(
             f"データセット数: {sum(len(ds_list) for ds_list in data.datasets.values())}"
         )
-        print(
+        logger.info(
             f"テーブル数: {sum(len(tbl_list) for ds_dict in data.tables.values() for tbl_list in ds_dict.values())}"
         )
     else:
-        print("キャッシュの取得/更新に失敗しました。")
+        logger.info("キャッシュの取得/更新に失敗しました。")
 
     # 2. 再度キャッシュ取得（TTL内であれば更新は走らないはず）
-    print("\n--- 2. 再度キャッシュ取得 (TTL内) ---")
+    logger.info("\n--- 2. 再度キャッシュ取得 (TTL内) ---")
     data_again = get_cached_data()
     if data_again:
-        print(f"キャッシュ取得成功。最終更新: {data_again.last_updated}")
+        logger.info(f"キャッシュ取得成功。最終更新: {data_again.last_updated}")
     else:
-        print("キャッシュの取得に失敗しました。")
+        logger.info("キャッシュの取得に失敗しました。")
 
     # 3. キャッシュの手動更新
-    print("\n--- 3. キャッシュの手動更新 ---")
+    logger.info("\n--- 3. キャッシュの手動更新 ---")
     updated_data = update_cache()
     if updated_data:
-        print(f"キャッシュの手動更新成功。最終更新: {updated_data.last_updated}")
+        logger.info(f"キャッシュの手動更新成功。最終更新: {updated_data.last_updated}")
     else:
-        print("キャッシュの手動更新に失敗しました。")
+        logger.info("キャッシュの手動更新に失敗しました。")

@@ -4,24 +4,24 @@ from typing import List, Optional, Literal
 from fastapi import FastAPI, HTTPException, Query, Path as FastApiPath
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 
-from bq_meta_api import cache_manager, log, logic, search_engine
-from bq_meta_api.config import settings
-from bq_meta_api.models import (
-    DatasetListResponse,
-    MarkdownTableListResponse,
-    MarkdownSearchResponse,
-    SearchResponse,
-    TableListResponse,
-    TableMetadata,
-)
-
-
 app = FastAPI(
     title="BigQuery Metadata API Server",
     description="Provides access to cached BigQuery dataset, table, and schema information.",
     version="0.1.0",
 )
+from bq_meta_api import log
+
+log.init_logger()
 logger = log.logger
+
+from bq_meta_api import cache_manager, converter, logic, search_engine
+from bq_meta_api.config import settings
+from bq_meta_api.models import (
+    DatasetListResponse,
+    SearchResponse,
+    TableListResponse,
+    TableMetadata,
+)
 
 
 # --- アプリケーション起動時の処理 ---
@@ -95,10 +95,9 @@ async def get_tables_in_dataset(
         found_tables: List[TableMetadata] = logic.get_tables(
             dataset_id, project_id=project_id
         )
-        print(found_tables)
         if format == "markdown":
             # マークダウン形式のレスポンスを生成
-            markdown_content = MarkdownTableListResponse.to_markdown(found_tables)
+            markdown_content = converter.convert_tables_to_markdown(found_tables)
             return Response(content=markdown_content, media_type="text/markdown")
         else:
             # JSON形式のレスポンスを生成
@@ -141,13 +140,12 @@ async def search_items(
     try:
         search_result = search_engine.search_metadata(key)
         # レスポンスの形式を処理
-        print(f"format: {format}")
         if format == "markdown":
-            search_response = MarkdownSearchResponse.from_search_results(
-                key, search_result
+            search_response = converter.convert_search_results_to_markdown(
+                query=key, results=search_result
             )
             return PlainTextResponse(
-                content=search_response.content, media_type="text/markdown"
+                content=search_response, media_type="text/markdown"
             )
         else:
             return SearchResponse(query=key, results=search_result)
