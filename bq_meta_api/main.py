@@ -40,7 +40,7 @@ async def startup_event():
     logger.info(f"APIサーバーを {settings.api_host}:{settings.api_port} で起動します。")
     logger.info(f"監視対象プロジェクト: {settings.project_ids}")
     logger.info(f"キャッシュTTL: {settings.cache_ttl_seconds}秒")
-    logger.info(f"キャッシュファイル: {settings.cache_file_path}")
+    logger.info(f"キャッシュファイル: {settings.cache_file_base_dir}")
 
 
 # --- API エンドポイント ---

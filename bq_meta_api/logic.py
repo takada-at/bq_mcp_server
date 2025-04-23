@@ -1,6 +1,6 @@
 from fastapi import HTTPException
-from typing import List, Optional
-from bq_meta_api import cache_manager, log
+from typing import List, Optional, Dict, Tuple
+from bq_meta_api import cache_manager, log, config
 from bq_meta_api.models import (
     CachedData,
     DatasetListResponse,
@@ -32,21 +32,41 @@ def get_current_cache() -> CachedData:
 
 def get_datasets() -> DatasetListResponse:
     """全プロジェクトのデータセット一覧を返す"""
-    cache = get_current_cache()
-    all_datasets: List[DatasetMetadata] = []
-    for project_datasets in cache.datasets.values():
-        all_datasets.extend(project_datasets)
-    return DatasetListResponse(datasets=all_datasets)
+    # グローバルキャッシュからデータセット一覧を取得
+    try:
+        cache = get_current_cache()
+        all_datasets: List[DatasetMetadata] = []
+        for project_datasets in cache.datasets.values():
+            all_datasets.extend(project_datasets)
+        return DatasetListResponse(datasets=all_datasets)
+    except Exception as e:
+        logger.error(f"データセット一覧の取得中にエラーが発生: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="データセット一覧の取得に失敗しました。サーバーが利用できません。",
+        )
 
 
 def get_datasets_by_project(project_id: str) -> DatasetListResponse:
     """指定されたプロジェクトのデータセット一覧を返す"""
-    cache = get_current_cache()
-    if project_id not in cache.datasets:
-        raise HTTPException(
-            status_code=404, detail=f"プロジェクト '{project_id}' は見つかりません。"
+    try:
+        cache = get_current_cache()
+        if project_id not in cache.datasets:
+            raise HTTPException(
+                status_code=404,
+                detail=f"プロジェクト '{project_id}' は見つかりません。",
+            )
+        return DatasetListResponse(datasets=cache.datasets[project_id])
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"プロジェクト '{project_id}' のデータセット一覧の取得中にエラーが発生: {e}"
         )
-    return DatasetListResponse(datasets=cache.datasets[project_id])
+        raise HTTPException(
+            status_code=503,
+            detail=f"プロジェクト '{project_id}' のデータセット一覧の取得に失敗しました。",
+        )
 
 
 def get_tables(
@@ -61,31 +81,79 @@ def get_tables(
     Raises:
         HTTPException: プロジェクトまたはデータセットが見つからない場合
     """
-    cache = get_current_cache()
     found_tables: List[TableMetadata] = []
-    if project_id:
-        # プロジェクトIDが指定されている場合、そのプロジェクトのデータセットを検索
-        if project_id not in cache.datasets:
-            raise HTTPException(
-                status_code=404,
-                detail=f"プロジェクト '{project_id}' は見つかりません。",
+
+    try:
+        if project_id:
+            # プロジェクトIDが指定されている場合、そのデータセットのキャッシュを直接取得
+            dataset, tables = cache_manager.get_cached_dataset_data(
+                project_id, dataset_id
             )
-        datasets_tables = cache.tables.get(project_id, {})
-        if dataset_id in datasets_tables:
-            # テーブル一覧とスキーマ情報を取得
-            for table_meta_with_schema in datasets_tables[dataset_id]:
-                found_tables.append(table_meta_with_schema)
-    else:
-        found_dataset: bool = False
-        for project_id, datasets_tables in cache.tables.items():
-            if dataset_id in datasets_tables:
-                found_dataset = True
-                # テーブル一覧とスキーマ情報を取得
-                for table_meta_with_schema in datasets_tables[dataset_id]:
-                    found_tables.append(table_meta_with_schema)
-        if not found_dataset:
-            raise HTTPException(
-                status_code=404,
-                detail=f"データセット '{dataset_id}' は見つかりません。",
-            )
-    return found_tables
+            if dataset is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"データセット '{project_id}.{dataset_id}' は見つかりません。",
+                )
+            return tables
+        else:
+            # プロジェクトIDが指定されていない場合、すべてのプロジェクトから検索
+            cache = get_current_cache()
+            found_dataset = False
+
+            for proj_id in config.settings.project_ids:
+                if proj_id in cache.tables and dataset_id in cache.tables[proj_id]:
+                    found_dataset = True
+                    dataset, tables = cache_manager.get_cached_dataset_data(
+                        proj_id, dataset_id
+                    )
+                    if dataset is not None and tables:
+                        found_tables.extend(tables)
+
+            if not found_dataset:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"データセット '{dataset_id}' は見つかりません。",
+                )
+
+            return found_tables
+    except HTTPException:
+        raise
+    except Exception as e:
+        project_info = f"{project_id}." if project_id else ""
+        logger.error(
+            f"テーブル一覧の取得中にエラーが発生: {project_info}{dataset_id}, {e}"
+        )
+        raise HTTPException(
+            status_code=503,
+            detail=f"データセット '{project_info}{dataset_id}' のテーブル一覧の取得に失敗しました。",
+        )
+
+
+def get_table_detail(
+    table_id: str, dataset_id: str, project_id: Optional[str] = None
+) -> TableMetadata:
+    """
+    指定されたテーブルの詳細情報（スキーマを含む）を返す
+
+    Args:
+        table_id: テーブルID
+        dataset_id: データセットID
+        project_id: プロジェクトID（オプション）
+
+    Returns:
+        TableMetadata: テーブルの詳細情報
+
+    Raises:
+        HTTPException: テーブルが見つからない場合
+    """
+    tables = get_tables(dataset_id, project_id)
+    for table in tables:
+        if table.table_id == table_id:
+            return table
+
+    # テーブルが見つからない場合
+    project_info = f"{project_id}." if project_id else ""
+    raise HTTPException(
+        status_code=404,
+        detail=f"テーブル '{project_info}{dataset_id}.{table_id}' は見つかりません。",
+    )

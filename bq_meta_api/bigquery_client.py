@@ -154,7 +154,7 @@ def fetch_tables_and_schemas(
                     dataset_id=table.dataset_id,
                     table_id=table.table_id,
                     full_table_id=full_table_id,
-                    schema=schema_model,  # schema_のエイリアス
+                    schema_=schema_model,
                     description=table.description,
                     num_rows=table.num_rows,
                     num_bytes=table.num_bytes,

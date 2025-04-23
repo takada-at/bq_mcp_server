@@ -10,6 +10,7 @@ Use get_datasets to retrieve a list of datasets and get_tables to retrieve a lis
     version="0.1.0",
 )
 from bq_meta_api import log
+
 log.init_logger(log_to_console=False)
 from bq_meta_api import converter, logic, search_engine
 

@@ -32,7 +32,9 @@ class Settings(BaseSettings):
     cache_ttl_seconds: int = int(
         os.getenv("CACHE_TTL_SECONDS", 3600)
     )  # デフォルト1時間
-    cache_file_path: str = os.getenv("CACHE_FILE_PATH", str(root / "bq_cache.json"))
+    cache_file_base_dir: str = os.getenv(
+        "CACHE_FILE_BASE_DIR", str(root / ".bq_metadata_cache")
+    )
 
     # APIサーバー設定 (uvicorn用)
     api_host: str = os.getenv("API_HOST", "127.0.0.1")
@@ -82,7 +84,7 @@ if __name__ == "__main__":
     )
     logger.warning(f"Project IDs: {settings.project_ids}")
     logger.warning(f"Cache TTL (seconds): {settings.cache_ttl_seconds}")
-    logger.warning(f"Cache File Path: {settings.cache_file_path}")
+    logger.warning(f"Cache File Base Dir: {settings.cache_file_base_dir}")
     logger.warning(f"API Host: {settings.api_host}")
     logger.warning(f"API Port: {settings.api_port}")
     logger.warning("--------------------------")
