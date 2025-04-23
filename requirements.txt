@@ -6,3 +6,4 @@ python-dotenv
 cachetools
 google-auth
 mcp[cli]
+pydantic-ai-slim[vertexai]
