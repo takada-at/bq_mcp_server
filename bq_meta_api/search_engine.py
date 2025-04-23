@@ -67,7 +67,7 @@ def _search_columns(
     return results
 
 
-def search_metadata(keyword: str) -> List[SearchResultItem]:
+async def search_metadata(keyword: str) -> List[SearchResultItem]:
     """
     キャッシュされたメタデータ全体からキーワードに一致する項目を検索します。
     データセット名、テーブル名、カラム名、およびそれらの説明を検索対象とします。
@@ -81,7 +81,7 @@ def search_metadata(keyword: str) -> List[SearchResultItem]:
     """
     logger.info(f"メタデータ検索を実行中: keyword='{keyword}', format='{format}'")
     results: List[SearchResultItem] = []
-    cached_data: Optional[CachedData] = cache_manager.get_cached_data()
+    cached_data: Optional[CachedData] = await cache_manager.get_cached_data()
 
     if not cached_data:
         logger.warning("検索対象のキャッシュデータがありません。")

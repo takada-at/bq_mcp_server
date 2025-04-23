@@ -30,7 +30,7 @@ async def startup_event():
     """アプリケーション起動時にキャッシュを読み込むか、必要であれば更新する"""
     logger.info("アプリケーション起動処理を開始します...")
     # 初回起動時にキャッシュを準備
-    cache_data = cache_manager.get_cached_data()
+    cache_data = await cache_manager.get_cached_data()
     if cache_data:
         logger.info("キャッシュの準備が完了しました。")
     else:
@@ -55,7 +55,7 @@ async def startup_event():
 async def get_datasets():
     """全プロジェクトのデータセット一覧を返す"""
     try:
-        return logic.get_datasets()
+        return await logic.get_datasets()
     except Exception as e:
         logger.error(f"/datasets エンドポイントでエラー: {e}", exc_info=True)
         raise HTTPException(
@@ -92,7 +92,7 @@ async def get_tables_in_dataset(
 ):
     """指定されたデータセットIDに属するテーブル一覧を返す"""
     try:
-        found_tables: List[TableMetadata] = logic.get_tables(
+        found_tables: List[TableMetadata] = await logic.get_tables(
             dataset_id, project_id=project_id
         )
         if format == "markdown":
@@ -138,7 +138,7 @@ async def search_items(
             status_code=400, detail="検索キーワード 'key' を指定してください。"
         )
     try:
-        search_result = search_engine.search_metadata(key)
+        search_result = await search_engine.search_metadata(key)
         # レスポンスの形式を処理
         if format == "markdown":
             search_response = converter.convert_search_results_to_markdown(
@@ -170,7 +170,7 @@ async def force_update_cache():
     # ここでは更新処理をバックグラウンドで実行せず、完了を待つ
     # 大規模な場合は BackgroundTasks を使う方が良い
     try:
-        updated_cache = cache_manager.update_cache()
+        updated_cache = await cache_manager.update_cache()
         if updated_cache:
             return JSONResponse(
                 status_code=200,

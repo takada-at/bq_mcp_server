@@ -13,9 +13,9 @@ logger = log.logger
 
 
 # --- ヘルパー関数 ---
-def get_current_cache() -> CachedData:
+async def get_current_cache() -> CachedData:
     """現在の有効なキャッシュデータを取得する。なければエラーを発生させる。"""
-    cache = cache_manager.load_cache()  # まずメモリ/ファイルから試す
+    cache = await cache_manager.load_cache()  # まずメモリ/ファイルから試す
     if cache and cache_manager.is_cache_valid(cache):
         return cache
     # キャッシュが無効または存在しない場合は更新を試みる
@@ -30,11 +30,11 @@ def get_current_cache() -> CachedData:
     return updated_cache
 
 
-def get_datasets() -> DatasetListResponse:
+async def get_datasets() -> DatasetListResponse:
     """全プロジェクトのデータセット一覧を返す"""
     # グローバルキャッシュからデータセット一覧を取得
     try:
-        cache = get_current_cache()
+        cache = await get_current_cache()
         all_datasets: List[DatasetMetadata] = []
         for project_datasets in cache.datasets.values():
             all_datasets.extend(project_datasets)
@@ -47,10 +47,10 @@ def get_datasets() -> DatasetListResponse:
         )
 
 
-def get_datasets_by_project(project_id: str) -> DatasetListResponse:
+async def get_datasets_by_project(project_id: str) -> DatasetListResponse:
     """指定されたプロジェクトのデータセット一覧を返す"""
     try:
-        cache = get_current_cache()
+        cache = await get_current_cache()
         if project_id not in cache.datasets:
             raise HTTPException(
                 status_code=404,
@@ -69,7 +69,7 @@ def get_datasets_by_project(project_id: str) -> DatasetListResponse:
         )
 
 
-def get_tables(
+async def get_tables(
     dataset_id: str, project_id: Optional[str] = None
 ) -> List[TableMetadata]:
     """指定されたデータセットのテーブル一覧を返す
@@ -127,33 +127,3 @@ def get_tables(
             status_code=503,
             detail=f"データセット '{project_info}{dataset_id}' のテーブル一覧の取得に失敗しました。",
         )
-
-
-def get_table_detail(
-    table_id: str, dataset_id: str, project_id: Optional[str] = None
-) -> TableMetadata:
-    """
-    指定されたテーブルの詳細情報（スキーマを含む）を返す
-
-    Args:
-        table_id: テーブルID
-        dataset_id: データセットID
-        project_id: プロジェクトID（オプション）
-
-    Returns:
-        TableMetadata: テーブルの詳細情報
-
-    Raises:
-        HTTPException: テーブルが見つからない場合
-    """
-    tables = get_tables(dataset_id, project_id)
-    for table in tables:
-        if table.table_id == table_id:
-            return table
-
-    # テーブルが見つからない場合
-    project_info = f"{project_id}." if project_id else ""
-    raise HTTPException(
-        status_code=404,
-        detail=f"テーブル '{project_info}{dataset_id}.{table_id}' は見つかりません。",
-    )

@@ -374,7 +374,7 @@ def update_dataset_cache(project_id: str, dataset_id: str) -> bool:
         return False
 
 
-def get_cached_data() -> Optional[CachedData]:
+async def get_cached_data() -> Optional[CachedData]:
     """
     有効なキャッシュデータを取得します。
     キャッシュが存在しないか無効な場合は、更新を試みます。
