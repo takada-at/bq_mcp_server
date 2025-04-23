@@ -57,10 +57,6 @@ def load_cache_file(
             _project_datasets_cache[project_id] = {}
         _project_datasets_cache[project_id][dataset_id] = last_updated
 
-        # 最新の更新時刻を記録
-        if last_updated > latest_updated:
-            latest_updated = last_updated
-
         # データセット情報を追加
         dataset_meta = DatasetMetadata.model_validate(data["dataset"])
 
@@ -81,6 +77,7 @@ def load_cache() -> Optional[CachedData]:
         logger.debug("メモリキャッシュを使用します。")
         return _cache
 
+    latest_updated = datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
     # 新しいキャッシュ構造からデータを読み込む
     if BASE_CACHE_DIR.exists():
         logger.info(f"キャッシュディレクトリから読み込みます: {BASE_CACHE_DIR}")
@@ -104,6 +101,10 @@ def load_cache() -> Optional[CachedData]:
                         dataset_meta, tables = loaded_data
                         all_datasets[project_id].append(dataset_meta)
                         all_tables[project_id][dataset_id] = tables
+                        latest_updated = max(
+                            latest_updated,
+                            _project_datasets_cache[project_id][dataset_id],
+                        )
 
         # 有効なキャッシュデータがある場合
         if latest_updated > datetime.datetime.min.replace(tzinfo=datetime.timezone.utc):
@@ -145,8 +146,8 @@ def save_dataset_cache(
 
     # キャッシュデータを作成
     cache_data = {
-        "dataset": dataset.model_dump_json(indent=2),
-        "tables": [table.model_dump_json(indent=2) for table in tables],
+        "dataset": dataset.model_dump(mode="json"),
+        "tables": [table.model_dump(mode="json") for table in tables],
         "last_updated": timestamp.isoformat(),
     }
 
