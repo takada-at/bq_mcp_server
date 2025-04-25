@@ -1,15 +1,10 @@
 # bigquery_client.py: Handles communication with Google BigQuery API
-import logging
-from typing import List, Optional, Tuple
+from typing import List, Optional
 from google.cloud import bigquery
 from google.oauth2 import service_account
 from google.auth.exceptions import DefaultCredentialsError, RefreshError
-from bq_meta_api import log
-from bq_meta_api.config import settings
+from bq_meta_api import config, log
 from bq_meta_api.models import DatasetMetadata, TableMetadata, TableSchema, ColumnSchema
-
-
-logger = log.logger
 
 
 def get_bigquery_client() -> Optional[bigquery.Client]:
@@ -21,6 +16,8 @@ def get_bigquery_client() -> Optional[bigquery.Client]:
     Returns:
         bigquery.Client: 初期化されたBigQueryクライアント。初期化に失敗した場合はNone。
     """
+    logger = log.get_logger()
+    settings = config.get_settings()
     try:
         if settings.gcp_service_account_key_path:
             logger.info(
@@ -73,6 +70,7 @@ def get_bigquery_client() -> Optional[bigquery.Client]:
 def fetch_datasets(client: bigquery.Client, project_id: str) -> List[DatasetMetadata]:
     """指定されたプロジェクトのデータセット一覧を取得します。"""
     datasets_metadata = []
+    logger = log.get_logger()
     try:
         datasets = list(client.list_datasets(project=project_id))  # プロジェクトを指定
         logger.info(
@@ -131,6 +129,7 @@ def fetch_tables_and_schemas(
     client: bigquery.Client, project_id: str, dataset_id: str
 ) -> List[TableMetadata]:
     """指定されたデータセットのテーブル一覧と各テーブルのスキーマを取得します。"""
+    logger = log.get_logger()
     tables_metadata = []
     dataset_ref = client.dataset(dataset_id, project=project_id)
     try:
@@ -178,52 +177,3 @@ def fetch_tables_and_schemas(
             f"データセット '{project_id}.{dataset_id}' のテーブル取得中にエラー: {e}"
         )
     return tables_metadata
-
-
-# --- テスト用コード ---
-if __name__ == "__main__":
-    logger.info("BigQuery Client テスト実行...")
-    client = get_bigquery_client()
-    if client and settings.project_ids:
-        test_project_id = settings.project_ids[0]
-        logger.info(f"\n--- データセット一覧 ({test_project_id}) ---")
-        datasets = fetch_datasets(client, test_project_id)
-        if datasets:
-            for ds in datasets:
-                logger.info(
-                    f"- {ds.project_id}.{ds.dataset_id} (Location: {ds.location}, Desc: {ds.description})"
-                )
-
-            test_dataset_id = datasets[0].dataset_id  # 最初のデータセットでテスト
-            logger.info(
-                f"\n--- テーブル一覧とスキーマ ({test_project_id}.{test_dataset_id}) ---"
-            )
-            tables = fetch_tables_and_schemas(client, test_project_id, test_dataset_id)
-            for tbl in tables:
-                logger.info(f"\nTable: {tbl.full_table_id}")
-                logger.info(f"  Description: {tbl.description}")
-                logger.info(f"  Rows: {tbl.num_rows}, Bytes: {tbl.num_bytes}")
-                logger.info(
-                    f"  Created: {tbl.created_time}, Modified: {tbl.last_modified_time}"
-                )
-                if tbl.schema_:
-                    logger.info("  Schema:")
-                    for col in tbl.schema_.columns:
-                        logger.info(
-                            f"    - {col.name} ({col.type}, {col.mode}) {col.description or ''}"
-                        )
-                        if col.fields:
-                            logger.info(f"      Nested Fields:")
-                            for nested_col in col.fields:
-                                logger.info(
-                                    f"        - {nested_col.name} ({nested_col.type}, {nested_col.mode})"
-                                )
-
-        else:
-            logger.info(
-                f"プロジェクト '{test_project_id}' でデータセットが見つかりませんでした。"
-            )
-    elif not client:
-        logger.info("BigQueryクライアントの初期化に失敗しました。")
-    elif not settings.project_ids:
-        logger.info("テスト対象のプロジェクトIDが設定されていません。")

@@ -5,10 +5,14 @@ from mcp.server.fastmcp import Context, FastMCP
 from typing import Optional
 
 
-from bq_meta_api import log
+from bq_meta_api import start
 
-log.init_logger(log_to_console=False)
-from bq_meta_api import cache_manager, converter, logic, models, search_engine
+
+start.init_app(log_to_console=False)
+from bq_meta_api import cache_manager, converter, log, logic, models, search_engine
+
+
+logger = log.get_logger()
 
 
 @dataclass

@@ -3,10 +3,8 @@ from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.gemini import GeminiModel
 import asyncio
 
-from bq_meta_api import log
 
-log.init_logger(log_to_console=False)
-from bq_meta_api import cache_manager, models, converter, logic, search_engine
+from bq_meta_api import cache_manager, models, converter, logic, search_engine, start
 
 
 @dataclass
@@ -58,6 +56,7 @@ async def search_metadata(ctx: RunContext[BQMetaAPIDeps], key: str):
 
 
 async def main():
+    start.init_app(log_to_console=True)
     cache_data = await cache_manager.get_cached_data()
     print("run agent")
     result = await agent.run(

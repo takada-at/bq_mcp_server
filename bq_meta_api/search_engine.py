@@ -1,15 +1,11 @@
 # search_engine.py: Provides search functionality over cached metadata
-import logging
 from typing import List, Optional
 from bq_meta_api import cache_manager, log
 from bq_meta_api.models import (
     CachedData,
     SearchResultItem,
     ColumnSchema,
-    SearchResponse,
 )
-
-logger = log.logger
 
 
 def _search_columns(
@@ -74,11 +70,11 @@ async def search_metadata(keyword: str) -> List[SearchResultItem]:
 
     Args:
         keyword: 検索キーワード。
-        format: 出力形式。'json'はデフォルト形式、'markdown'はMarkdown形式。
 
     Returns:
         検索結果。formatパラメータに応じて、SearchResultItemのリスト
     """
+    logger = log.get_logger()
     logger.info(f"メタデータ検索を実行中: keyword='{keyword}', format='{format}'")
     results: List[SearchResultItem] = []
     cached_data: Optional[CachedData] = await cache_manager.get_cached_data()
@@ -179,45 +175,3 @@ async def search_metadata(keyword: str) -> List[SearchResultItem]:
 
     logger.info(f"検索完了。 {len(results)} 件のヒットがありました。")
     return results
-
-
-# --- テスト用コード ---
-if __name__ == "__main__":
-    print("Search Engine テスト実行...")
-
-    # ダミーのキャッシュデータを作成（実際にはcache_managerから取得）
-    # このテストは cache_manager が正常に動作し、キャッシュファイルが生成された後に有効
-    print("\n--- キャッシュからデータを取得して検索 ---")
-    test_keyword = "user"  # 検索したいキーワード
-    search_results = search_metadata(test_keyword)
-
-    if search_results:
-        print(f"\n--- キーワード '{test_keyword}' の検索結果 ---")
-        for item in search_results:
-            if item.type == "dataset":
-                print(
-                    f"- [Dataset] {item.project_id}.{item.dataset_id} (Match: {item.match_location})"
-                )
-            elif item.type == "table":
-                print(
-                    f"- [Table]   {item.project_id}.{item.dataset_id}.{item.table_id} (Match: {item.match_location})"
-                )
-            elif item.type == "column":
-                print(
-                    f"- [Column]  {item.project_id}.{item.dataset_id}.{item.table_id}.{item.column_name} (Match: {item.match_location})"
-                )
-    else:
-        print(
-            f"キーワード '{test_keyword}' に一致するメタデータは見つかりませんでした。"
-        )
-
-    # Markdownフォーマットのテスト
-    test_keyword_md = "time"
-    search_results_md = search_metadata(test_keyword_md, format="markdown")
-    if hasattr(search_results_md, "content"):
-        print(f"\n--- キーワード '{test_keyword_md}' のMarkdown検索結果 ---")
-        print(search_results_md.content)
-    else:
-        print(
-            f"キーワード '{test_keyword_md}' に一致するメタデータは見つかりませんでした。"
-        )

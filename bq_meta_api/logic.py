@@ -9,12 +9,10 @@ from bq_meta_api.models import (
 )
 
 
-logger = log.logger
-
-
 # --- ヘルパー関数 ---
 async def get_current_cache() -> CachedData:
     """現在の有効なキャッシュデータを取得する。なければエラーを発生させる。"""
+    logger = log.get_logger()
     cache = await cache_manager.load_cache()  # まずメモリ/ファイルから試す
     if cache and cache_manager.is_cache_valid(cache):
         return cache
@@ -33,6 +31,7 @@ async def get_current_cache() -> CachedData:
 async def get_datasets() -> DatasetListResponse:
     """全プロジェクトのデータセット一覧を返す"""
     # グローバルキャッシュからデータセット一覧を取得
+    logger = log.get_logger()
     try:
         cache = await get_current_cache()
         all_datasets: List[DatasetMetadata] = []
@@ -49,6 +48,7 @@ async def get_datasets() -> DatasetListResponse:
 
 async def get_datasets_by_project(project_id: str) -> DatasetListResponse:
     """指定されたプロジェクトのデータセット一覧を返す"""
+    logger = log.get_logger()
     try:
         cache = await get_current_cache()
         if project_id not in cache.datasets:
@@ -82,6 +82,7 @@ async def get_tables(
         HTTPException: プロジェクトまたはデータセットが見つからない場合
     """
     found_tables: List[TableMetadata] = []
+    logger = log.get_logger()
 
     try:
         if project_id:
@@ -99,8 +100,9 @@ async def get_tables(
             # プロジェクトIDが指定されていない場合、すべてのプロジェクトから検索
             cache = get_current_cache()
             found_dataset = False
+            settings = config.get_settings()
 
-            for proj_id in config.settings.project_ids:
+            for proj_id in settings.project_ids:
                 if proj_id in cache.tables and dataset_id in cache.tables[proj_id]:
                     found_dataset = True
                     dataset, tables = cache_manager.get_cached_dataset_data(

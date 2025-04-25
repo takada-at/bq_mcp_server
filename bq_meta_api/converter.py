@@ -1,5 +1,5 @@
 # converter.py: Converts BigQuery metadata to various formats
-from typing import List, Optional
+from typing import List
 from bq_meta_api.models import (
     DatasetMetadata,
     TableMetadata,

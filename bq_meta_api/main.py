@@ -9,13 +9,12 @@ app = FastAPI(
     description="Provides access to cached BigQuery dataset, table, and schema information.",
     version="0.1.0",
 )
-from bq_meta_api import log
+from bq_meta_api import start
 
-log.init_logger()
-logger = log.logger
+start.init_app(log_to_console=True)  # ログ設定と設定の初期化
 
-from bq_meta_api import cache_manager, converter, logic, search_engine
-from bq_meta_api.config import settings
+
+from bq_meta_api import cache_manager, config, converter, log, logic, search_engine
 from bq_meta_api.models import (
     DatasetListResponse,
     SearchResponse,
@@ -24,10 +23,14 @@ from bq_meta_api.models import (
 )
 
 
+logger = log.get_logger()
+
+
 # --- アプリケーション起動時の処理 ---
 @app.on_event("startup")
 async def startup_event():
     """アプリケーション起動時にキャッシュを読み込むか、必要であれば更新する"""
+    settings = config.get_settings()
     logger.info("アプリケーション起動処理を開始します...")
     # 初回起動時にキャッシュを準備
     cache_data = await cache_manager.get_cached_data()
@@ -198,7 +201,4 @@ if __name__ == "__main__":
     # main:app を指定するため、このファイル自体を実行するのではなく、
     # コマンドラインから `uvicorn bq_meta_api.main:app --reload --host 0.0.0.0 --port 8000` のように実行する
     print("サーバーを起動するには、以下のコマンドを実行してください:")
-    print(
-        f"uvicorn bq_meta_api.main:app --host {settings.api_host} --port {settings.api_port} --reload"
-    )
-    # uvicorn.run("main:app", host=settings.api_host, port=settings.api_port, reload=True) # この書き方はモジュール解決の問題でうまく動かないことが多い
+    print(f"uvicorn bq_meta_api.main:app --reload")

@@ -5,6 +5,16 @@ import logging
 logger = None
 
 
+def get_logger(log_to_console: bool = True) -> logging.Logger:
+    """
+    Get the logger instance.
+    """
+    global logger
+    if logger is None:
+        init_logger()
+    return logger
+
+
 def init_logger(log_to_console: bool = True):
     """
     Initialize the logger with a specific format and level.
