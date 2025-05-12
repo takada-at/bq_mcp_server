@@ -63,7 +63,7 @@ def _search_columns(
     return results
 
 
-async def search_metadata(keyword: str) -> List[SearchResultItem]:
+async def search_metadata_inner(keyword: str) -> List[SearchResultItem]:
     """
     キャッシュされたメタデータ全体からキーワードに一致する項目を検索します。
     データセット名、テーブル名、カラム名、およびそれらの説明を検索対象とします。
@@ -174,4 +174,44 @@ async def search_metadata(keyword: str) -> List[SearchResultItem]:
                             results.append(col_res)
 
     logger.info(f"検索完了。 {len(results)} 件のヒットがありました。")
+    return results
+
+
+def multi_split(text: str, delimiters: List[str]) -> List[str]:
+    """
+    複数の区切り文字で文字列を分割する関数
+
+    Args:
+        text (str): 分割する文字列
+        delimiters (List[str]): 区切り文字の集合
+
+    Returns:
+        list: 分割された文字列のリスト
+    """
+    # 初期結果は元の文字列
+    result = [text]
+
+    # 各区切り文字について処理
+    for delimiter in delimiters:
+        # 一時的な結果リスト
+        temp_result = []
+        # 現在の結果リストの各要素について
+        for item in result:
+            # 区切り文字で分割して一時リストに追加
+            temp_result.extend(item.split(delimiter))
+        # 結果を更新
+        result = temp_result
+
+    # 空の文字列を除去
+    return [item.strip() for item in result if item]
+
+
+async def search_metadata(keyword: str) -> List[SearchResultItem]:
+    keywords = multi_split(keyword, [" ", ",", "."])
+    results = []
+    for k in keywords:
+        if not k:
+            continue
+        k = k.replace('"', "").replace("`", "")
+        results += await search_metadata_inner(k)
     return results
