@@ -14,7 +14,6 @@ root = Path(__file__).parent.parent.resolve()
 envpath = (root / ".env").resolve()
 
 load_dotenv(str(envpath))
-logger = log.get_logger()
 _settings = None
 
 
@@ -61,6 +60,7 @@ def get_settings() -> Settings:
 def init_setting():
     # 設定インスタンスを作成
     settings = Settings()
+    logger = log.get_logger()
 
     # --- 設定値の簡単なバリデーション ---
     if not settings.project_ids:

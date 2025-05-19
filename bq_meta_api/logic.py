@@ -1,5 +1,6 @@
 from fastapi import HTTPException
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional
+import traceback
 from bq_meta_api import cache_manager, log, config
 from bq_meta_api.models import (
     CachedData,
@@ -13,7 +14,7 @@ from bq_meta_api.models import (
 async def get_current_cache() -> CachedData:
     """現在の有効なキャッシュデータを取得する。なければエラーを発生させる。"""
     logger = log.get_logger()
-    cache = await cache_manager.load_cache()  # まずメモリ/ファイルから試す
+    cache = cache_manager.load_cache()  # まずメモリ/ファイルから試す
     if cache and cache_manager.is_cache_valid(cache):
         return cache
     # キャッシュが無効または存在しない場合は更新を試みる
@@ -40,6 +41,7 @@ async def get_datasets() -> DatasetListResponse:
         return DatasetListResponse(datasets=all_datasets)
     except Exception as e:
         logger.error(f"データセット一覧の取得中にエラーが発生: {e}")
+        logger.error(traceback.format_exception(e))
         raise HTTPException(
             status_code=503,
             detail="データセット一覧の取得に失敗しました。サーバーが利用できません。",

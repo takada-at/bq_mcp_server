@@ -1,5 +1,5 @@
 # models.py: Defines Pydantic models for data structures and API responses
-from typing import List, Optional, Dict, Any, Literal, Union
+from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
 import datetime
 # 循環インポートを修正: MarkdownConverterのインポートを削除
