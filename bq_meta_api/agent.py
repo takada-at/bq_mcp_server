@@ -4,12 +4,13 @@ from pydantic_ai.models.gemini import GeminiModel
 import asyncio
 
 
-from bq_meta_api import cache_manager, models, converter, logic, search_engine, start
+from bq_meta_api import cache_manager, converter, logic, search_engine, start # models removed
+from bq_meta_api.domain import entities # models imported as entities
 
 
 @dataclass
 class BQMetaAPIDeps:
-    cache_data: models.CachedData
+    cache_data: entities.CachedData # use entities alias
 
 
 model = GeminiModel("gemini-2.5-pro-preview-03-25", provider="google-vertex")

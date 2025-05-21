@@ -1,8 +1,8 @@
 from fastapi import HTTPException
 from typing import List, Optional
 import traceback
-from bq_meta_api import cache_manager, log, config
-from bq_meta_api.models import (
+from bq_meta_api import cache_manager, log, config # cache_manager will be updated later
+from bq_meta_api.domain.entities import ( # Updated import
     CachedData,
     DatasetListResponse,
     DatasetMetadata,
@@ -49,28 +49,28 @@ async def get_datasets() -> DatasetListResponse:
             detail="データセット一覧の取得に失敗しました。サーバーが利用できません。",
         )
 
-
-async def get_datasets_by_project(project_id: str) -> DatasetListResponse:
-    """指定されたプロジェクトのデータセット一覧を返す"""
-    logger = log.get_logger()
-    try:
-        cache = await get_current_cache()
-        if project_id not in cache.datasets:
-            raise HTTPException(
-                status_code=404,
-                detail=f"プロジェクト '{project_id}' は見つかりません。",
-            )
-        return DatasetListResponse(datasets=cache.datasets[project_id])
-    except HTTPException:  # Specific HTTPException should be re-raised
-        raise
-    except Exception as e:
-        logger.error(
-            f"プロジェクト '{project_id}' のデータセット一覧の取得中にエラーが発生: {e}"
-        )
-        raise HTTPException(
-            status_code=503,
-            detail=f"プロジェクト '{project_id}' のデータセット一覧の取得に失敗しました。",
-        )
+# This function's logic has been moved to ListDatasetsService
+# async def get_datasets_by_project(project_id: str) -> DatasetListResponse:
+#     """指定されたプロジェクトのデータセット一覧を返す"""
+#     logger = log.get_logger()
+#     try:
+#         cache = await get_current_cache()
+#         if project_id not in cache.datasets:
+#             raise HTTPException(
+#                 status_code=404,
+#                 detail=f"プロジェクト '{project_id}' は見つかりません。",
+#             )
+#         return DatasetListResponse(datasets=cache.datasets[project_id])
+#     except HTTPException:  # Specific HTTPException should be re-raised
+#         raise
+#     except Exception as e:
+#         logger.error(
+#             f"プロジェクト '{project_id}' のデータセット一覧の取得中にエラーが発生: {e}"
+#         )
+#         raise HTTPException(
+#             status_code=503,
+#             detail=f"プロジェクト '{project_id}' のデータセット一覧の取得に失敗しました。",
+#         )
 
 
 async def get_tables(

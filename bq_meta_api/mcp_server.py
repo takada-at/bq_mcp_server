@@ -9,7 +9,8 @@ from bq_meta_api import start
 
 
 start.init_app(log_to_console=False)
-from bq_meta_api import cache_manager, converter, log, logic, models, search_engine
+from bq_meta_api import cache_manager, converter, log, logic, search_engine # models removed
+from bq_meta_api.domain import entities # models imported as entities
 
 
 logger = log.get_logger()
@@ -17,7 +18,7 @@ logger = log.get_logger()
 
 @dataclass
 class AppContext:
-    cache_data: models.CachedData
+    cache_data: entities.CachedData # use entities alias
 
 
 @asynccontextmanager
