@@ -39,6 +39,8 @@ async def get_datasets() -> DatasetListResponse:
         for project_datasets in cache.datasets.values():
             all_datasets.extend(project_datasets)
         return DatasetListResponse(datasets=all_datasets)
+    except HTTPException:  # Specific HTTPException should be re-raised
+        raise
     except Exception as e:
         logger.error(f"データセット一覧の取得中にエラーが発生: {e}")
         logger.error(traceback.format_exception(e))
@@ -59,7 +61,7 @@ async def get_datasets_by_project(project_id: str) -> DatasetListResponse:
                 detail=f"プロジェクト '{project_id}' は見つかりません。",
             )
         return DatasetListResponse(datasets=cache.datasets[project_id])
-    except HTTPException:
+    except HTTPException:  # Specific HTTPException should be re-raised
         raise
     except Exception as e:
         logger.error(
@@ -100,7 +102,7 @@ async def get_tables(
             return tables
         else:
             # プロジェクトIDが指定されていない場合、すべてのプロジェクトから検索
-            cache = get_current_cache()
+            cache = await get_current_cache() # Added await
             found_dataset = False
             settings = config.get_settings()
 
@@ -120,7 +122,7 @@ async def get_tables(
                 )
 
             return found_tables
-    except HTTPException:
+    except HTTPException:  # Specific HTTPException should be re-raised
         raise
     except Exception as e:
         project_info = f"{project_id}." if project_id else ""
