@@ -1,49 +1,45 @@
 # main.py: FastAPI application entry point
-from typing import List, Optional, Literal
-
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query, Path as FastApiPath
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
+from typing import List, Optional, Literal
 
-app = FastAPI(
-    title="BigQuery Metadata API Server",
-    description="Provides access to cached BigQuery dataset, table, and schema information.",
-    version="0.1.0",
-)
-from bq_meta_api import start
-
-start.init_app(log_to_console=True)  # ログ設定と設定の初期化
-
-
-from bq_meta_api import cache_manager, config, converter, log, logic, search_engine
-from bq_meta_api.models import (
+from bq_meta_api.core import converter, logic
+from bq_meta_api.core.entities import (
+    ApplicationContext,
     DatasetListResponse,
     SearchResponse,
     TableListResponse,
     TableMetadata,
 )
+from bq_meta_api.repositories import cache_manager, config, log, search_engine
 
 
-logger = log.get_logger()
-
-
-# --- アプリケーション起動時の処理 ---
-@app.on_event("startup")
-async def startup_event():
-    """アプリケーション起動時にキャッシュを読み込むか、必要であれば更新する"""
-    settings = config.get_settings()
-    logger.info("アプリケーション起動処理を開始します...")
-    # 初回起動時にキャッシュを準備
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """アプリケーションのライフサイクルイベントを管理する"""
+    log_setting = log.init_logger()
+    settings = config.init_setting()
     cache_data = await cache_manager.get_cached_data()
-    if cache_data:
-        logger.info("キャッシュの準備が完了しました。")
-    else:
-        logger.warning(
-            "キャッシュの準備に失敗しました。APIは機能しない可能性があります。"
-        )
+    context = ApplicationContext(
+        settings=settings,
+        log_setting=log_setting,
+        cache_data=cache_data,
+    )
+    logger = log.get_logger()
     logger.info(f"APIサーバーを {settings.api_host}:{settings.api_port} で起動します。")
     logger.info(f"監視対象プロジェクト: {settings.project_ids}")
     logger.info(f"キャッシュTTL: {settings.cache_ttl_seconds}秒")
     logger.info(f"キャッシュファイル: {settings.cache_file_base_dir}")
+    yield
+
+
+app = FastAPI(
+    title="BigQuery Metadata API Server",
+    description="Provides access to cached BigQuery dataset, table, and schema information.",
+    version="0.1.0",
+    lifespan=lifespan,
+)
 
 
 # --- API エンドポイント ---
@@ -57,6 +53,7 @@ async def startup_event():
 )
 async def get_datasets():
     """全プロジェクトのデータセット一覧を返す"""
+    logger = log.get_logger()
     try:
         return await logic.get_datasets()
     except Exception as e:
@@ -94,6 +91,7 @@ async def get_tables_in_dataset(
     ),
 ):
     """指定されたデータセットIDに属するテーブル一覧を返す"""
+    logger = log.get_logger()
     try:
         found_tables: List[TableMetadata] = await logic.get_tables(
             dataset_id, project_id=project_id
@@ -136,6 +134,7 @@ async def search_items(
     ),
 ):
     """キーワードに基づいてメタデータを検索する"""
+    logger = log.get_logger()
     if not key:
         raise HTTPException(
             status_code=400, detail="検索キーワード 'key' を指定してください。"
@@ -169,6 +168,7 @@ async def search_items(
 )
 async def force_update_cache():
     """キャッシュの手動更新をトリガーするエンドポイント"""
+    logger = log.get_logger()
     logger.info("キャッシュの手動更新リクエストを受け付けました。")
     # ここでは更新処理をバックグラウンドで実行せず、完了を待つ
     # 大規模な場合は BackgroundTasks を使う方が良い
@@ -201,4 +201,4 @@ if __name__ == "__main__":
     # main:app を指定するため、このファイル自体を実行するのではなく、
     # コマンドラインから `uvicorn bq_meta_api.main:app --reload --host 0.0.0.0 --port 8000` のように実行する
     print("サーバーを起動するには、以下のコマンドを実行してください:")
-    print(f"uvicorn bq_meta_api.main:app --reload")
+    print(f"uvicorn bq_meta_api.adapters.web:app --reload")

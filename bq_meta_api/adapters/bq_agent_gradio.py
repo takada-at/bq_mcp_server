@@ -1,17 +1,10 @@
-from __future__ import annotations as _annotations
-
 import json
-import os
-
-from httpx import AsyncClient
 
 from pydantic_ai.messages import ToolCallPart, ToolReturnPart
 
-from bq_meta_api import log
-
-log.init_logger(log_to_console=False)
-from bq_meta_api import cache_manager
-from bq_meta_api.agent import agent as bq_agent, BQMetaAPIDeps
+from bq_meta_api.adapters.agent import agent as bq_agent
+from bq_meta_api.core.entities import ApplicationContext
+from bq_meta_api.repositories import cache_manager, config, log
 
 try:
     import gradio as gr
@@ -25,37 +18,44 @@ TOOL_TO_DISPLAY_NAME = {"bq_meta_api": "BigQuery Metadata API"}
 
 
 async def stream_from_agent(prompt: str, chatbot: list[dict], past_messages: list):
+    log_setting = log.init_logger()
+    setting = config.init_setting()
     cache_data = await cache_manager.get_cached_data()
-    deps = BQMetaAPIDeps(cache_data=cache_data)
+    context = ApplicationContext(
+        settings=setting,
+        cache_data=cache_data,
+        log_setting=log_setting,
+    )
     chatbot.append({"role": "user", "content": prompt})
     yield gr.Textbox(interactive=False, value=""), chatbot, gr.skip()
     async with bq_agent.run_stream(
-        prompt, deps=deps, message_history=past_messages
+        prompt, deps=context, message_history=past_messages
     ) as result:
         for message in result.new_messages():
             for call in message.parts:
+                print(call)
                 if isinstance(call, ToolCallPart):
-                    call_args = (
-                        call.args.args_json
-                        if hasattr(call.args, "args_json")
-                        else json.dumps(call.args.args_dict)
-                    )
+                    if isinstance(call.args, str):
+                        call_args = json.loads(call.args)
+                    else:
+                        call_args = call.args
                     metadata = {
-                        "title": f"🛠️ Using {TOOL_TO_DISPLAY_NAME[call.tool_name]}",
+                        "title": f"🛠️ Using {call.tool_name}",
                     }
                     if call.tool_call_id is not None:
-                        metadata["id"] = {call.tool_call_id}
+                        metadata["id"] = call.tool_call_id
 
                     gr_message = {
                         "role": "assistant",
-                        "content": "Parameters: " + call_args,
+                        "content": "Parameters: " + str(call_args),
                         "metadata": metadata,
                     }
                     chatbot.append(gr_message)
                 if isinstance(call, ToolReturnPart):
                     for gr_message in chatbot:
                         if (
-                            gr_message.get("metadata", {}).get("id", "")
+                            gr_message is not None
+                            and gr_message.get("metadata", {}).get("id", "")
                             == call.tool_call_id
                         ):
                             gr_message["content"] += (
@@ -109,15 +109,14 @@ with gr.Blocks() as demo:
         type="messages",
         avatar_images=(None, "https://ai.pydantic.dev/img/logo-white.svg"),
         examples=[
-            {"text": "What is the weather like in Miami?"},
-            {"text": "What is the weather like in London?"},
+            {"text": "データセット一覧を表示してください"},
         ],
     )
     with gr.Row():
         prompt = gr.Textbox(
             lines=1,
             show_label=False,
-            placeholder="What is the weather like in New York City?",
+            placeholder="データセット一覧を表示してください",
         )
     generation = prompt.submit(
         stream_from_agent,

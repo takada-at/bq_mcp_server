@@ -1,31 +1,26 @@
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
 from mcp.server.fastmcp import Context, FastMCP
 from typing import Optional
 
 
-from bq_meta_api import start
-
-
-start.init_app(log_to_console=False)
-from bq_meta_api import cache_manager, converter, log, logic, models, search_engine
-
-
-logger = log.get_logger()
-
-
-@dataclass
-class AppContext:
-    cache_data: models.CachedData
+from bq_meta_api.core import converter, logic
+from bq_meta_api.core.entities import ApplicationContext
+from bq_meta_api.repositories import cache_manager, config, log, search_engine
 
 
 @asynccontextmanager
-async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
+async def app_lifespan(server: FastMCP) -> AsyncIterator[ApplicationContext]:
     """Manage application lifecycle with type-safe context"""
-    # Initialize on startup
-    cache = await cache_manager.get_cached_data()
-    yield AppContext(cache_data=cache)
+    log_setting = log.init_logger(log_to_console=False)
+    setting = config.init_setting()
+    cache_data = await cache_manager.get_cached_data()
+    context = ApplicationContext(
+        settings=setting,
+        log_setting=log_setting,
+        cache_data=cache_data,
+    )
+    yield context
 
 
 mcp = FastMCP(

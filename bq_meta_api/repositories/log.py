@@ -2,6 +2,9 @@ from pathlib import Path
 import logging
 
 
+from bq_meta_api.core.entities import LogSetting
+
+
 logger = None
 
 
@@ -15,7 +18,7 @@ def get_logger(log_to_console: bool = True) -> logging.Logger:
     return logger
 
 
-def init_logger(log_to_console: bool = True):
+def init_logger(log_to_console: bool = True) -> LogSetting:
     """
     Initialize the logger with a specific format and level.
     """
@@ -28,7 +31,7 @@ def init_logger(log_to_console: bool = True):
             logger = logging.getLogger("bq_meta_api")
         else:
             DEFAULT_LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            log_dir = Path(Path(__file__).parent / "../logs").resolve()
+            log_dir = Path(Path(__file__).parent / "../../logs").resolve()
             log_dir.mkdir(parents=True, exist_ok=True)
             log_file = log_dir / "bq_meta_api.log"
             formatter = logging.Formatter(DEFAULT_LOG_FORMAT)
@@ -38,3 +41,6 @@ def init_logger(log_to_console: bool = True):
             logger.propagate = False
             logger.addHandler(file_handler)
     logger.info("Logger initialized.")
+    return LogSetting(
+        log_to_console=log_to_console,
+    )

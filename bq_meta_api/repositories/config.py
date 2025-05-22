@@ -2,52 +2,17 @@
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-from pydantic import ConfigDict, field_validator
-from pydantic_settings import BaseSettings
-from typing import List, Optional
 
-from bq_meta_api import log
+from bq_meta_api.core.entities import Settings
+from bq_meta_api.repositories import log
 
 
 # .env ファイルを読み込む
-root = Path(__file__).parent.parent.resolve()
+root = Path(__file__).parent.parent.parent.resolve()
 envpath = (root / ".env").resolve()
 
 load_dotenv(str(envpath))
 _settings = None
-
-
-class Settings(BaseSettings):
-    """アプリケーション設定を管理するクラス"""
-
-    # GCP関連設定
-    gcp_service_account_key_path: Optional[str] = os.getenv(
-        "GCP_SERVICE_ACCOUNT_KEY_PATH"
-    )
-    project_ids: List[str] = [
-        pid.strip() for pid in os.getenv("PROJECT_IDS", "").split(",") if pid.strip()
-    ]
-
-    # キャッシュ設定
-    cache_ttl_seconds: int = int(
-        os.getenv("CACHE_TTL_SECONDS", 3600)
-    )  # デフォルト1時間
-    cache_file_base_dir: str = os.getenv(
-        "CACHE_FILE_BASE_DIR", str(root / ".bq_metadata_cache")
-    )
-
-    # APIサーバー設定 (uvicorn用)
-    api_host: str = os.getenv("API_HOST", "127.0.0.1")
-    api_port: int = int(os.getenv("API_PORT", 8000))
-
-    model_config = ConfigDict(
-        env_file=".env", env_file_encoding="utf-8", enable_decoding=False
-    )
-
-    @field_validator("project_ids", mode="before")
-    @classmethod
-    def decode_project_ids(cls, v: str) -> list[int]:
-        return [x.strip() for x in v.split(",")]
 
 
 def get_settings() -> Settings:
@@ -57,9 +22,25 @@ def get_settings() -> Settings:
     return _settings
 
 
-def init_setting():
+def init_setting() -> Settings:
     # 設定インスタンスを作成
-    settings = Settings()
+    # 環境変数を読み込んで初期値作成
+    gcp_service_account_key_path = os.getenv("GCP_SERVICE_ACCOUNT_KEY_PATH", None)
+    project_ids = os.getenv("PROJECT_IDS", "").split(",")
+    cache_ttl_seconds = int(os.getenv("CACHE_TTL_SECONDS", 3600))
+    cache_file_base_dir = os.getenv("CACHE_FILE_BASE_DIR", str(root / "cache"))
+    cache_file_base_dir = os.path.abspath(cache_file_base_dir)
+    api_host = os.getenv("API_HOST", "127.0.0.1")
+    api_port = int(os.getenv("API_PORT", 8000))
+
+    settings = Settings(
+        gcp_service_account_key_path=gcp_service_account_key_path,
+        project_ids=project_ids,
+        cache_ttl_seconds=cache_ttl_seconds,
+        cache_file_base_dir=cache_file_base_dir,
+        api_host=api_host,
+        api_port=api_port,
+    )
     logger = log.get_logger()
 
     # --- 設定値の簡単なバリデーション ---

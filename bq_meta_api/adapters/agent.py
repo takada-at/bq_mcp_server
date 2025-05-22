@@ -4,18 +4,15 @@ from pydantic_ai.models.gemini import GeminiModel
 import asyncio
 
 
-from bq_meta_api import cache_manager, models, converter, logic, search_engine, start
-
-
-@dataclass
-class BQMetaAPIDeps:
-    cache_data: models.CachedData
+from bq_meta_api.core import converter, logic
+from bq_meta_api.core.entities import ApplicationContext
+from bq_meta_api.repositories import cache_manager, config, log, search_engine
 
 
 model = GeminiModel("gemini-2.5-pro-preview-03-25", provider="google-vertex")
 agent = Agent(
     model,
-    deps_type=BQMetaAPIDeps,
+    deps_type=ApplicationContext,
     system_prompt="""あなたのタスクは、ツールを使ってメタデータを検索しながら、BigQueryのSQLを書くことです。
 あなたは、BigQueryのデータセット、テーブル、カラムのメタデータを検索するためのツールを持っています。ツールを積極的に使用しましょう。
 データセットやテーブル名は必ず、ツールを使って確認するようにしてください。
@@ -24,7 +21,7 @@ agent = Agent(
 
 
 @agent.tool
-async def get_datasets(ctx: RunContext[BQMetaAPIDeps]):
+async def get_datasets(ctx: RunContext[ApplicationContext]):
     """
     Get list of all datasets
     """
@@ -35,7 +32,7 @@ async def get_datasets(ctx: RunContext[BQMetaAPIDeps]):
 
 @agent.tool
 async def get_tables(
-    ctx: RunContext[BQMetaAPIDeps], dataset_id: str, project_id: str = None
+    ctx: RunContext[ApplicationContext], dataset_id: str, project_id: str = None
 ):
     """
     Get list of all tables in a dataset
@@ -46,7 +43,7 @@ async def get_tables(
 
 
 @agent.tool
-async def search_metadata(ctx: RunContext[BQMetaAPIDeps], key: str):
+async def search_metadata(ctx: RunContext[ApplicationContext], key: str):
     """
     Search metadata for datasets, tables, and columns
     """
@@ -56,12 +53,17 @@ async def search_metadata(ctx: RunContext[BQMetaAPIDeps], key: str):
 
 
 async def main():
-    start.init_app(log_to_console=True)
+    log_setting = log.init_logger()
+    setting = config.init_setting()
     cache_data = await cache_manager.get_cached_data()
+    context = ApplicationContext(
+        settings=setting,
+        log_setting=log_setting,
+        cache_data=cache_data,
+    )
     print("run agent")
     result = await agent.run(
-        "copilot_metricsテーブルのcountを取得するSQLを書いてください",
-        deps=BQMetaAPIDeps(cache_data=cache_data),
+        "copilot_metricsテーブルのcountを取得するSQLを書いてください", deps=context
     )
     print(result)
 

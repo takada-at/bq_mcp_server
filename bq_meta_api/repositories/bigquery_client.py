@@ -3,8 +3,14 @@ from typing import List, Optional
 from google.cloud import bigquery
 from google.oauth2 import service_account
 from google.auth.exceptions import DefaultCredentialsError, RefreshError
-from bq_meta_api import config, log
-from bq_meta_api.models import DatasetMetadata, TableMetadata, TableSchema, ColumnSchema
+from bq_meta_api.repositories import config
+from bq_meta_api.core.entities import (
+    DatasetMetadata,
+    TableMetadata,
+    TableSchema,
+    ColumnSchema,
+)
+from bq_meta_api.repositories import log
 
 
 def get_bigquery_client() -> Optional[bigquery.Client]:
