@@ -20,7 +20,8 @@ async def get_current_cache() -> CachedData:
         return cache
     # キャッシュが無効または存在しない場合は更新を試みる
     logger.info("キャッシュが無効または存在しないため、更新を試みます...")
-    updated_cache = cache_manager.update_cache()
+    # cache_manager.update_cache() is now async
+    updated_cache = await cache_manager.update_cache()
     if not updated_cache:
         logger.error("キャッシュの更新に失敗しました。")
         raise HTTPException(
@@ -92,7 +93,8 @@ async def get_tables(
     try:
         if project_id:
             # プロジェクトIDが指定されている場合、そのデータセットのキャッシュを直接取得
-            dataset, tables = cache_manager.get_cached_dataset_data(
+            # cache_manager.get_cached_dataset_data is now async
+            dataset, tables = await cache_manager.get_cached_dataset_data(
                 project_id, dataset_id
             )
             if dataset is None:
@@ -110,7 +112,8 @@ async def get_tables(
             for proj_id in settings.project_ids:
                 if proj_id in cache.tables and dataset_id in cache.tables[proj_id]:
                     found_dataset = True
-                    dataset, tables = cache_manager.get_cached_dataset_data(
+                    # cache_manager.get_cached_dataset_data is now async
+                    dataset, tables = await cache_manager.get_cached_dataset_data(
                         proj_id, dataset_id
                     )
                     if dataset is not None and tables:
