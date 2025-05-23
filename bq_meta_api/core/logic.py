@@ -1,13 +1,14 @@
 from fastapi import HTTPException
 from typing import List, Optional
 import traceback
-from bq_meta_api import cache_manager, log, config
-from bq_meta_api.models import (
+from bq_meta_api.repositories import config
+from bq_meta_api.core.entities import (
     CachedData,
     DatasetListResponse,
     DatasetMetadata,
     TableMetadata,
 )
+from bq_meta_api.repositories import cache_manager, log
 
 
 # --- ヘルパー関数 ---
@@ -102,7 +103,7 @@ async def get_tables(
             return tables
         else:
             # プロジェクトIDが指定されていない場合、すべてのプロジェクトから検索
-            cache = await get_current_cache() # Added await
+            cache = await get_current_cache()  # Added await
             found_dataset = False
             settings = config.get_settings()
 

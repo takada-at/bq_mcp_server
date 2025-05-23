@@ -1,5 +1,5 @@
-from bq_meta_api import converter
-from bq_meta_api.models import TableMetadata, TableSchema, ColumnSchema
+from bq_meta_api.core import converter
+from bq_meta_api.core.entities import TableMetadata, TableSchema, ColumnSchema
 
 
 def test_convert_tables_to_markdown_empty_list():

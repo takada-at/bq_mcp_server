@@ -3,8 +3,9 @@ import json
 import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
-from bq_meta_api import bigquery_client, config, log
-from bq_meta_api.models import CachedData, DatasetMetadata, TableMetadata
+from bq_meta_api.repositories import config
+from bq_meta_api.core.entities import CachedData, DatasetMetadata, TableMetadata
+from bq_meta_api.repositories import bigquery_client, log
 
 
 # インメモリキャッシュ（シングルトン的に保持）
@@ -222,6 +223,8 @@ def is_dataset_cache_valid(project_id: str, dataset_id: str) -> bool:
         キャッシュが有効な場合はTrue、それ以外はFalse
     """
     logger = log.get_logger()
+    settings = config.get_settings()
+    ttl = datetime.timedelta(seconds=settings.cache_ttl_seconds)
     # メモリキャッシュをチェック
     if (
         project_id in _project_datasets_cache
@@ -229,7 +232,7 @@ def is_dataset_cache_valid(project_id: str, dataset_id: str) -> bool:
     ):
         last_updated = _project_datasets_cache[project_id][dataset_id]
         now = datetime.datetime.now(datetime.timezone.utc)
-        return (now - last_updated) < CACHE_TTL
+        return (now - last_updated) < ttl
 
     # ファイルをチェック
     cache_file = get_cache_file_path(project_id, dataset_id)
@@ -246,7 +249,7 @@ def is_dataset_cache_valid(project_id: str, dataset_id: str) -> bool:
                 last_updated = last_updated.replace(tzinfo=datetime.timezone.utc)
 
             now = datetime.datetime.now(datetime.timezone.utc)
-            is_valid = (now - last_updated) < CACHE_TTL
+            is_valid = (now - last_updated) < ttl
 
             # メモリキャッシュを更新
             if is_valid:

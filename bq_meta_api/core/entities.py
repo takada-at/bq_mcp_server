@@ -1,8 +1,16 @@
 # models.py: Defines Pydantic models for data structures and API responses
+from dataclasses import dataclass
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
 import datetime
-# 循環インポートを修正: MarkdownConverterのインポートを削除
+
+
+class LogSetting(BaseModel):
+    """ログ設定を完了したことを示すモデル"""
+
+    log_to_console: bool = Field(
+        False, description="コンソールにログを出力するかどうか"
+    )
 
 
 class ColumnSchema(BaseModel):
@@ -109,3 +117,37 @@ class CachedData(BaseModel):
     last_updated: Optional[datetime.datetime] = Field(
         None, description="キャッシュの最終更新日時"
     )
+
+
+class Settings(BaseModel):
+    """アプリケーション設定を管理するクラス"""
+
+    # GCP関連設定
+    gcp_service_account_key_path: Optional[str] = Field(
+        ..., description="GCPサービスアカウントキーのパス"
+    )
+    project_ids: List[str] = Field(
+        ...,
+        description="GCPプロジェクトIDのリスト",
+    )
+    # キャッシュ設定
+    cache_ttl_seconds: int = Field(
+        3600,
+        description="キャッシュの有効期限（秒）",
+    )
+    cache_file_base_dir: str = Field(
+        ..., description="キャッシュファイルの保存先ディレクトリ"
+    )
+
+    # APIサーバー設定 (uvicorn用)
+    api_host: str = Field("127.0.0.1", description="APIサーバーのホスト名")
+    api_port: int = Field(8000, description="APIサーバーのポート番号")
+
+
+@dataclass
+class ApplicationContext:
+    """アプリケーションのコンテキストを保持するクラス"""
+
+    settings: Settings
+    log_setting: LogSetting
+    cache_data: CachedData
