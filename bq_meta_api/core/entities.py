@@ -108,7 +108,6 @@ class QueryExecutionRequest(BaseModel):
 
     sql: str = Field(..., description="実行するSQLクエリ")
     project_id: Optional[str] = Field(None, description="実行対象のプロジェクトID")
-    dry_run: bool = Field(False, description="ドライランモードで実行するか")
 
 
 class QueryDryRunResult(BaseModel):
