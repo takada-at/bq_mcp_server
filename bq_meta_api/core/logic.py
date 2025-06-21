@@ -7,8 +7,10 @@ from bq_meta_api.core.entities import (
     DatasetListResponse,
     DatasetMetadata,
     TableMetadata,
+    QueryExecutionResult,
 )
 from bq_meta_api.repositories import cache_manager, log
+from bq_meta_api.repositories.query_executor import QueryExecutor
 
 
 # --- ヘルパー関数 ---
@@ -133,4 +135,31 @@ async def get_tables(
         raise HTTPException(
             status_code=503,
             detail=f"データセット '{project_info}{dataset_id}' のテーブル一覧の取得に失敗しました。",
+        )
+
+
+async def execute_query(
+    sql: str, project_id: Optional[str] = None, force: bool = False
+) -> QueryExecutionResult:
+    """BigQueryクエリを安全に実行する"""
+
+    logger = log.get_logger()
+    settings = config.get_settings()
+
+    try:
+        query_executor = QueryExecutor(settings)
+        result = await query_executor.execute_query(
+            sql, project_id, force_execute=force
+        )
+
+        if result.success:
+            logger.info(f"クエリ実行成功 - 結果行数: {result.total_rows}")
+        else:
+            logger.warning(f"クエリ実行失敗: {result.error_message}")
+
+        return result
+    except Exception as e:
+        logger.error(f"クエリ実行中にエラーが発生: {e}")
+        raise HTTPException(
+            status_code=500, detail="クエリ実行中に内部エラーが発生しました。"
         )
