@@ -35,21 +35,16 @@ class QueryExecutor:
                 )
         return self.client
 
-    async def dry_run_query(
-        self, sql: str, project_id: Optional[str] = None
-    ) -> QueryDryRunResult:
+    def _validate_and_prepare_query(self, sql: str) -> str:
         """
-        クエリのドライランを実行してスキャン量をチェックする
+        クエリの安全性チェックとLIMIT句の追加・修正を行う
 
         Args:
             sql: 実行するSQLクエリ
-            project_id: 実行対象のプロジェクトID
 
         Returns:
-            ドライラン結果
+            修正されたSQLクエリ
         """
-        self.logger.info(f"ドライラン実行開始: {sql[:100]}...")
-
         # クエリの安全性チェック
         is_safe, error_msg = QueryParser.is_safe_query(sql)
         if not is_safe:
@@ -59,6 +54,22 @@ class QueryExecutor:
         modified_sql = QueryParser.add_or_modify_limit(
             sql, self.settings.default_query_limit
         )
+        return modified_sql
+
+    async def check_scan_amount(
+        self, sql: str, project_id: Optional[str] = None
+    ) -> QueryDryRunResult:
+        """
+        クエリのスキャン量をドライランでチェックする
+
+        Args:
+            sql: 実行するSQLクエリ（既に準備済み）
+            project_id: 実行対象のプロジェクトID
+
+        Returns:
+            ドライラン結果
+        """
+        self.logger.info(f"スキャン量チェック開始: {sql[:100]}...")
 
         try:
             client = self._get_client(project_id)
@@ -70,7 +81,7 @@ class QueryExecutor:
             )
 
             # ドライランクエリを実行
-            query_job = client.query(modified_sql, job_config=job_config)
+            query_job = client.query(sql, job_config=job_config)
 
             # 結果を取得
             total_bytes_processed = query_job.total_bytes_processed or 0
@@ -80,7 +91,7 @@ class QueryExecutor:
             is_safe_to_run = total_bytes_processed <= self.settings.max_scan_bytes
 
             self.logger.info(
-                f"ドライラン完了 - 処理予定バイト数: {total_bytes_processed:,}, "
+                f"スキャン量チェック完了 - 処理予定バイト数: {total_bytes_processed:,}, "
                 f"課金予定バイト数: {total_bytes_billed:,}, "
                 f"安全: {is_safe_to_run}"
             )
@@ -89,14 +100,14 @@ class QueryExecutor:
                 total_bytes_processed=total_bytes_processed,
                 total_bytes_billed=total_bytes_billed,
                 is_safe=is_safe_to_run,
-                modified_sql=modified_sql,
+                modified_sql=sql,
             )
 
         except Exception as e:
-            self.logger.error(f"ドライラン実行エラー: {e}")
+            self.logger.error(f"スキャン量チェックエラー: {e}")
             raise HTTPException(
                 status_code=500,
-                detail=f"ドライラン実行中にエラーが発生しました: {str(e)}",
+                detail=f"スキャン量チェック中にエラーが発生しました: {str(e)}",
             )
 
     async def execute_query(
@@ -117,9 +128,12 @@ class QueryExecutor:
         self.logger.info(f"クエリ実行開始: {sql[:100]}...")
 
         try:
+            # クエリの準備（安全性チェック + LIMIT句修正）
+            modified_sql = self._validate_and_prepare_query(sql)
+
             # ドライランチェック（force_executeがFalseの場合のみ）
             if not force_execute:
-                dry_run_result = await self.dry_run_query(sql, project_id)
+                dry_run_result = await self.check_scan_amount(modified_sql, project_id)
                 if not dry_run_result.is_safe:
                     return QueryExecutionResult(
                         success=False,
@@ -129,12 +143,6 @@ class QueryExecutor:
                             f"制限: {self.settings.max_scan_bytes:,} bytes"
                         ),
                     )
-                modified_sql = dry_run_result.modified_sql
-            else:
-                # 強制実行の場合でもLIMIT句は追加・修正
-                modified_sql = QueryParser.add_or_modify_limit(
-                    sql, self.settings.default_query_limit
-                )
 
             client = self._get_client(project_id)
 

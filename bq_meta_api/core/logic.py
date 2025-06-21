@@ -8,6 +8,7 @@ from bq_meta_api.core.entities import (
     DatasetMetadata,
     TableMetadata,
     QueryExecutionResult,
+    QueryDryRunResult,
 )
 from bq_meta_api.repositories import cache_manager, log
 from bq_meta_api.repositories.query_executor import QueryExecutor
@@ -135,6 +136,31 @@ async def get_tables(
         raise HTTPException(
             status_code=503,
             detail=f"データセット '{project_info}{dataset_id}' のテーブル一覧の取得に失敗しました。",
+        )
+
+
+async def check_query_scan_amount(
+    sql: str, project_id: Optional[str] = None
+) -> QueryDryRunResult:
+    """BigQueryクエリのスキャン量を事前にチェックする（元のクエリのまま）"""
+    logger = log.get_logger()
+    settings = config.get_settings()
+
+    try:
+        query_executor = QueryExecutor(settings)
+        result = await query_executor.check_scan_amount(sql, project_id)
+
+        logger.info(f"スキャン量チェック完了: {result.total_bytes_processed:,} bytes")
+        return result
+
+    except HTTPException as http_exc:
+        logger.error(f"スキャン量チェックでHTTPエラー: {http_exc.detail}")
+        raise http_exc
+    except Exception as e:
+        logger.error(f"スキャン量チェックでエラーが発生しました: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"スキャン量チェック中にエラーが発生しました: {str(e)}",
         )
 
 
