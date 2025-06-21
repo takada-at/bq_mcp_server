@@ -181,6 +181,9 @@ class QueryExecutor:
                 job_id=query_job.job_id,
             )
 
+        except HTTPException as http_exc:
+            self.logger.error(f"HTTPエラー: {http_exc.detail}")
+            raise http_exc
         except Exception as e:
             execution_time_ms = int((time.time() - start_time) * 1000)
             error_msg = str(e)
