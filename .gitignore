@@ -1,4 +1,5 @@
 .bq_metadata_cache
+.mcp.json
 .roo
 .env
 log

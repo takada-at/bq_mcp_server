@@ -8,7 +8,7 @@ root = Path(__file__).parent.resolve()
 # Create server parameters for stdio connection
 server_params = StdioServerParameters(
     command="python",  # Executable
-    args=["-m", "bq_meta_api.mcp_server"],  # Optional command line arguments
+    args=["-m", "bq_meta_api.adapters.mcp_server"],  # Optional command line arguments
     env={
         "PYTHONPATH": str(root),  # Set PYTHONPATH to the root directory
     },

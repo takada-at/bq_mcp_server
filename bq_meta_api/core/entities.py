@@ -103,6 +103,36 @@ class SearchResponse(BaseModel):
     results: List[SearchResultItem] = Field(..., description="検索結果リスト")
 
 
+class QueryExecutionRequest(BaseModel):
+    """クエリ実行リクエストモデル"""
+
+    sql: str = Field(..., description="実行するSQLクエリ")
+    project_id: Optional[str] = Field(None, description="実行対象のプロジェクトID")
+    dry_run: bool = Field(False, description="ドライランモードで実行するか")
+
+
+class QueryDryRunResult(BaseModel):
+    """ドライラン実行結果モデル"""
+
+    total_bytes_processed: int = Field(..., description="処理される予定のバイト数")
+    total_bytes_billed: int = Field(..., description="課金される予定のバイト数")
+    is_safe: bool = Field(..., description="安全に実行できるクエリかどうか")
+    modified_sql: str = Field(..., description="LIMIT句が修正されたSQL")
+
+
+class QueryExecutionResult(BaseModel):
+    """クエリ実行結果モデル"""
+
+    success: bool = Field(..., description="クエリが正常に実行されたか")
+    rows: Optional[List[Dict]] = Field(None, description="クエリ結果の行データ")
+    total_rows: Optional[int] = Field(None, description="総行数")
+    total_bytes_processed: Optional[int] = Field(None, description="処理されたバイト数")
+    total_bytes_billed: Optional[int] = Field(None, description="課金されたバイト数")
+    execution_time_ms: Optional[int] = Field(None, description="実行時間（ミリ秒）")
+    error_message: Optional[str] = Field(None, description="エラーメッセージ")
+    job_id: Optional[str] = Field(None, description="BigQueryジョブID")
+
+
 # --- キャッシュ用データ構造 ---
 class CachedData(BaseModel):
     """キャッシュに保存するデータ全体のモデル"""
@@ -124,7 +154,7 @@ class Settings(BaseModel):
 
     # GCP関連設定
     gcp_service_account_key_path: Optional[str] = Field(
-        ..., description="GCPサービスアカウントキーのパス"
+        None, description="GCPサービスアカウントキーのパス（未設定の場合はADCを使用）"
     )
     project_ids: List[str] = Field(
         ...,
@@ -136,12 +166,23 @@ class Settings(BaseModel):
         description="キャッシュの有効期限（秒）",
     )
     cache_file_base_dir: str = Field(
-        ..., description="キャッシュファイルの保存先ディレクトリ"
+        ".bq_metadata_cache", description="キャッシュファイルの保存先ディレクトリ"
     )
 
     # APIサーバー設定 (uvicorn用)
     api_host: str = Field("127.0.0.1", description="APIサーバーのホスト名")
     api_port: int = Field(8000, description="APIサーバーのポート番号")
+
+    # クエリ実行設定
+    max_scan_bytes: int = Field(
+        1024 * 1024 * 1024,  # 1GB
+        description="クエリの最大スキャンバイト数",
+    )
+    default_query_limit: int = Field(100, description="デフォルトのクエリ結果制限数")
+    query_timeout_seconds: int = Field(
+        300,  # 5 minutes
+        description="クエリのタイムアウト秒数",
+    )
 
 
 @dataclass

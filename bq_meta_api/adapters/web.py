@@ -8,6 +8,8 @@ from bq_meta_api.core import converter, logic
 from bq_meta_api.core.entities import (
     ApplicationContext,
     DatasetListResponse,
+    QueryExecutionRequest,
+    QueryExecutionResult,
     SearchResponse,
     TableListResponse,
     TableMetadata,
@@ -26,11 +28,15 @@ async def lifespan(app: FastAPI):
         log_setting=log_setting,
         cache_data=cache_data,
     )
+
     logger = log.get_logger()
     logger.info(f"APIサーバーを {settings.api_host}:{settings.api_port} で起動します。")
     logger.info(f"監視対象プロジェクト: {settings.project_ids}")
     logger.info(f"キャッシュTTL: {settings.cache_ttl_seconds}秒")
     logger.info(f"キャッシュファイル: {settings.cache_file_base_dir}")
+    logger.info(
+        f"クエリ実行設定 - 最大スキャン量: {settings.max_scan_bytes} bytes, デフォルトLIMIT: {settings.default_query_limit}"
+    )
     yield
 
 
@@ -190,6 +196,28 @@ async def force_update_cache():
         logger.error(f"/cache/update エンドポイントでエラー: {e}", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"キャッシュ更新中にエラーが発生しました: {e}"
+        )
+
+
+@app.post(
+    "/query/execute",
+    response_model=QueryExecutionResult,
+    summary="Execute BigQuery SQL",
+    description="Executes a BigQuery SQL with safety checks. Automatically adds/modifies LIMIT clause and checks scan amount unless dry_run is True or force execution is requested.",
+)
+async def execute_query(request: QueryExecutionRequest):
+    """BigQueryクエリを安全に実行する"""
+    try:
+        result = await logic.execute_query(request.sql, request.project_id, False)
+        return result
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        log.get_logger().error(
+            f"/query/execute エンドポイントでエラー: {e}", exc_info=True
+        )
+        raise HTTPException(
+            status_code=500, detail="クエリ実行中に内部エラーが発生しました。"
         )
 
 
