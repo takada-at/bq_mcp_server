@@ -87,6 +87,7 @@ async def execute_query(sql: str, project_id: Optional[str] = None):
         sql: The SQL query to execute
         project_id: Optional project ID to use for the query (defaults to first configured project)
     """
+    # フォース実行フラグは絶対にFalseにする。MCPでは抜け道できないようにする。
     result = await logic.execute_query(sql, project_id, force=False)
     return converter.convert_query_result_to_markdown(result, project_id)
 
