@@ -64,6 +64,114 @@ def _search_columns(
     return results
 
 
+def _is_duplicate_result(
+    result: SearchResultItem, existing_results: List[SearchResultItem]
+) -> bool:
+    """検索結果が既存の結果と重複しているかチェックする"""
+    for existing in existing_results:
+        if (
+            result.type == existing.type
+            and result.project_id == existing.project_id
+            and result.dataset_id == existing.dataset_id
+            and result.table_id == existing.table_id
+            and result.column_name == existing.column_name
+            and result.match_location == existing.match_location
+        ):
+            return True
+    return False
+
+
+def _search_datasets(cached_data: CachedData, keyword: str) -> List[SearchResultItem]:
+    """データセットを検索する"""
+    results = []
+    lower_keyword = keyword.lower()
+
+    for project_id, datasets in cached_data.datasets.items():
+        for dataset in datasets:
+            # データセットIDで検索
+            if lower_keyword in dataset.dataset_id.lower():
+                result = SearchResultItem(
+                    type="dataset",
+                    project_id=project_id,
+                    dataset_id=dataset.dataset_id,
+                    match_location="name",
+                )
+                if not _is_duplicate_result(result, results):
+                    results.append(result)
+
+            # データセットの説明で検索
+            if dataset.description and lower_keyword in dataset.description.lower():
+                result = SearchResultItem(
+                    type="dataset",
+                    project_id=project_id,
+                    dataset_id=dataset.dataset_id,
+                    match_location="description",
+                )
+                if not _is_duplicate_result(result, results):
+                    results.append(result)
+
+    return results
+
+
+def _search_tables(cached_data: CachedData, keyword: str) -> List[SearchResultItem]:
+    """テーブルを検索する"""
+    results = []
+    lower_keyword = keyword.lower()
+
+    for project_id, datasets_tables in cached_data.tables.items():
+        for dataset_id, tables in datasets_tables.items():
+            for table in tables:
+                # テーブルIDで検索
+                if lower_keyword in table.table_id.lower():
+                    result = SearchResultItem(
+                        type="table",
+                        project_id=project_id,
+                        dataset_id=dataset_id,
+                        table_id=table.table_id,
+                        match_location="name",
+                    )
+                    if not _is_duplicate_result(result, results):
+                        results.append(result)
+
+                # テーブルの説明で検索
+                if table.description and lower_keyword in table.description.lower():
+                    result = SearchResultItem(
+                        type="table",
+                        project_id=project_id,
+                        dataset_id=dataset_id,
+                        table_id=table.table_id,
+                        match_location="description",
+                    )
+                    if not _is_duplicate_result(result, results):
+                        results.append(result)
+
+    return results
+
+
+def _search_table_columns(
+    cached_data: CachedData, keyword: str
+) -> List[SearchResultItem]:
+    """テーブルのカラムを検索する"""
+    results = []
+
+    for project_id, datasets_tables in cached_data.tables.items():
+        for dataset_id, tables in datasets_tables.items():
+            for table in tables:
+                if table.schema_:
+                    column_results = _search_columns(
+                        table.schema_.columns,
+                        keyword,
+                        project_id,
+                        dataset_id,
+                        table.table_id,
+                    )
+                    for col_res in column_results:
+                        if not _is_duplicate_result(col_res, results):
+                            results.append(col_res)
+
+    return results
+
+
 async def search_metadata_inner(keyword: str) -> List[SearchResultItem]:
     """
     キャッシュされたメタデータ全体からキーワードに一致する項目を検索します。
@@ -73,109 +181,30 @@ async def search_metadata_inner(keyword: str) -> List[SearchResultItem]:
         keyword: 検索キーワード。
 
     Returns:
-        検索結果。formatパラメータに応じて、SearchResultItemのリスト
+        検索結果のリスト
     """
     logger = log.get_logger()
-    logger.info(f"メタデータ検索を実行中: keyword='{keyword}', format='{format}'")
-    results: List[SearchResultItem] = []
-    cached_data: Optional[CachedData] = await cache_manager.get_cached_data()
+    logger.info(f"メタデータ検索を実行中: keyword='{keyword}'")
 
+    cached_data: Optional[CachedData] = await cache_manager.get_cached_data()
     if not cached_data:
         logger.warning("検索対象のキャッシュデータがありません。")
-        return results
+        return []
 
-    lower_keyword = keyword.lower()
+    # 各タイプを並行して検索
+    dataset_results = _search_datasets(cached_data, keyword)
+    table_results = _search_tables(cached_data, keyword)
+    column_results = _search_table_columns(cached_data, keyword)
 
-    # 1. データセットを検索
-    for project_id, datasets in cached_data.datasets.items():
-        for dataset in datasets:
-            # データセットIDで検索
-            if lower_keyword in dataset.dataset_id.lower():
-                results.append(
-                    SearchResultItem(
-                        type="dataset",
-                        project_id=project_id,
-                        dataset_id=dataset.dataset_id,
-                        match_location="name",
-                    )
-                )
-            # データセットの説明で検索
-            if dataset.description and lower_keyword in dataset.description.lower():
-                # 同じデータセットがすでに追加されていないかチェック
-                if not any(
-                    r.type == "dataset"
-                    and r.dataset_id == dataset.dataset_id
-                    and r.match_location == "description"
-                    for r in results
-                ):
-                    results.append(
-                        SearchResultItem(
-                            type="dataset",
-                            project_id=project_id,
-                            dataset_id=dataset.dataset_id,
-                            match_location="description",
-                        )
-                    )
+    # 結果をマージ（全体での重複チェック）
+    all_results = []
+    for result_list in [dataset_results, table_results, column_results]:
+        for result in result_list:
+            if not _is_duplicate_result(result, all_results):
+                all_results.append(result)
 
-    # 2. テーブルとカラムを検索
-    for project_id, datasets_tables in cached_data.tables.items():
-        for dataset_id, tables in datasets_tables.items():
-            for table in tables:
-                # テーブルIDで検索
-                if lower_keyword in table.table_id.lower():
-                    results.append(
-                        SearchResultItem(
-                            type="table",
-                            project_id=project_id,
-                            dataset_id=dataset_id,
-                            table_id=table.table_id,
-                            match_location="name",
-                        )
-                    )
-                # テーブルの説明で検索
-                if table.description and lower_keyword in table.description.lower():
-                    # 同じテーブルがすでに追加されていないかチェック
-                    if not any(
-                        r.type == "table"
-                        and r.table_id == table.table_id
-                        and r.match_location == "description"
-                        for r in results
-                    ):
-                        results.append(
-                            SearchResultItem(
-                                type="table",
-                                project_id=project_id,
-                                dataset_id=dataset_id,
-                                table_id=table.table_id,
-                                match_location="description",
-                            )
-                        )
-
-                # カラムを検索 (スキーマが存在する場合)
-                if table.schema_:
-                    column_results = _search_columns(
-                        table.schema_.columns,
-                        keyword,
-                        project_id,
-                        dataset_id,
-                        table.table_id,
-                    )
-                    # 重複を避けるため、既存の結果に含まれていないものだけ追加
-                    for col_res in column_results:
-                        is_duplicate = any(
-                            r.type == "column"
-                            and r.project_id == col_res.project_id
-                            and r.dataset_id == col_res.dataset_id
-                            and r.table_id == col_res.table_id
-                            and r.column_name == col_res.column_name
-                            and r.match_location == col_res.match_location
-                            for r in results
-                        )
-                        if not is_duplicate:
-                            results.append(col_res)
-
-    logger.info(f"検索完了。 {len(results)} 件のヒットがありました。")
-    return results
+    logger.info(f"検索完了。 {len(all_results)} 件のヒットがありました。")
+    return all_results
 
 
 def multi_split(text: str, delimiters: List[str]) -> List[str]:
