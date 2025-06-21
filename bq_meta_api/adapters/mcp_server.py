@@ -65,19 +65,30 @@ async def search_metadata(key: str):
     return markdown_content
 
 
+@mcp.tool("check_query_scan_amount")
+async def check_query_scan_amount(sql: str, project_id: Optional[str] = None):
+    """
+    Check the scan amount of a BigQuery SQL query using dry-run without executing it.
+
+    Args:
+        sql: The SQL query to check
+        project_id: Optional project ID to use for the query (defaults to first configured project)
+    """
+    result = await logic.check_query_scan_amount(sql, project_id)
+    return converter.convert_dry_run_result_to_markdown(result, project_id)
+
+
 @mcp.tool("execute_query")
-async def execute_query(
-    sql: str, project_id: Optional[str] = None, force: bool = False
-):
+async def execute_query(sql: str, project_id: Optional[str] = None):
     """
     Execute BigQuery SQL with automatic safety checks and LIMIT clause management.
 
     Args:
         sql: The SQL query to execute
         project_id: Optional project ID to use for the query (defaults to first configured project)
-        force: Force execution even if scan amount exceeds limits (use carefully)
     """
-    result = await logic.execute_query(sql, project_id, force)
+    # フォース実行フラグは絶対にFalseにする。MCPでは抜け道できないようにする。
+    result = await logic.execute_query(sql, project_id, force=False)
     return converter.convert_query_result_to_markdown(result, project_id)
 
 

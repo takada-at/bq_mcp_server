@@ -35,8 +35,8 @@ class TestQueryExecutor:
     """Test cases for QueryExecutor class"""
 
     @pytest.mark.asyncio
-    async def test_dry_run_query_safe(self, query_executor):
-        """Test dry run with safe query"""
+    async def test_check_scan_amount_safe(self, query_executor):
+        """Test scan amount check with safe query"""
         with patch.object(query_executor, "_get_client") as mock_get_client:
             # Mock BigQuery client and job
             mock_client = Mock()
@@ -46,18 +46,17 @@ class TestQueryExecutor:
             mock_client.query.return_value = mock_job
             mock_get_client.return_value = mock_client
 
-            sql = "SELECT * FROM dataset.table"
-            result = await query_executor.dry_run_query(sql)
+            sql = "SELECT * FROM dataset.table LIMIT 10"  # Already prepared
+            result = await query_executor.check_scan_amount(sql)
 
             assert isinstance(result, QueryDryRunResult)
             assert result.total_bytes_processed == 1000
             assert result.total_bytes_billed == 1000
             assert result.is_safe is True
-            assert "LIMIT 10" in result.modified_sql
 
     @pytest.mark.asyncio
-    async def test_dry_run_query_unsafe(self, query_executor):
-        """Test dry run with unsafe query (exceeds scan limit)"""
+    async def test_check_scan_amount_unsafe(self, query_executor):
+        """Test scan amount check with unsafe query (exceeds scan limit)"""
         with patch.object(query_executor, "_get_client") as mock_get_client:
             # Mock BigQuery client and job
             mock_client = Mock()
@@ -67,33 +66,39 @@ class TestQueryExecutor:
             mock_client.query.return_value = mock_job
             mock_get_client.return_value = mock_client
 
-            sql = "SELECT * FROM dataset.table"
-            result = await query_executor.dry_run_query(sql)
+            sql = "SELECT * FROM dataset.table LIMIT 10"  # Already prepared
+            result = await query_executor.check_scan_amount(sql)
 
             assert isinstance(result, QueryDryRunResult)
             assert result.total_bytes_processed == 2 * 1024 * 1024
             assert result.is_safe is False
 
-    @pytest.mark.asyncio
-    async def test_dry_run_query_dangerous_sql(self, query_executor):
-        """Test dry run with dangerous SQL"""
+    def test_validate_and_prepare_query_dangerous_sql(self, query_executor):
+        """Test query validation with dangerous SQL"""
         sql = "DELETE FROM dataset.table WHERE id = 1"
 
         with pytest.raises(HTTPException) as exc_info:
-            await query_executor.dry_run_query(sql)
+            query_executor._validate_and_prepare_query(sql)
 
         assert exc_info.value.status_code == 400
         assert "危険なSQL操作" in exc_info.value.detail
+
+    def test_validate_and_prepare_query_adds_limit(self, query_executor):
+        """Test that query preparation adds LIMIT clause"""
+        sql = "SELECT * FROM dataset.table"
+        result = query_executor._validate_and_prepare_query(sql)
+
+        assert "LIMIT 10" in result
 
     @pytest.mark.asyncio
     async def test_execute_query_success(self, query_executor):
         """Test successful query execution"""
         with (
             patch.object(query_executor, "_get_client") as mock_get_client,
-            patch.object(query_executor, "dry_run_query") as mock_dry_run,
+            patch.object(query_executor, "check_scan_amount") as mock_check_scan,
         ):
-            # Mock dry run result (safe)
-            mock_dry_run.return_value = QueryDryRunResult(
+            # Mock scan amount check result (safe)
+            mock_check_scan.return_value = QueryDryRunResult(
                 total_bytes_processed=1000,
                 total_bytes_billed=1000,
                 is_safe=True,
@@ -125,9 +130,9 @@ class TestQueryExecutor:
     @pytest.mark.asyncio
     async def test_execute_query_unsafe_blocked(self, query_executor):
         """Test query execution blocked due to unsafe scan amount"""
-        with patch.object(query_executor, "dry_run_query") as mock_dry_run:
-            # Mock dry run result (unsafe)
-            mock_dry_run.return_value = QueryDryRunResult(
+        with patch.object(query_executor, "check_scan_amount") as mock_check_scan:
+            # Mock scan amount check result (unsafe)
+            mock_check_scan.return_value = QueryDryRunResult(
                 total_bytes_processed=2 * 1024 * 1024,  # Exceeds limit
                 total_bytes_billed=2 * 1024 * 1024,
                 is_safe=False,
@@ -167,10 +172,10 @@ class TestQueryExecutor:
         """Test query execution with error"""
         with (
             patch.object(query_executor, "_get_client") as mock_get_client,
-            patch.object(query_executor, "dry_run_query") as mock_dry_run,
+            patch.object(query_executor, "check_scan_amount") as mock_check_scan,
         ):
-            # Mock dry run result (safe)
-            mock_dry_run.return_value = QueryDryRunResult(
+            # Mock scan amount check result (safe)
+            mock_check_scan.return_value = QueryDryRunResult(
                 total_bytes_processed=1000,
                 total_bytes_billed=1000,
                 is_safe=True,

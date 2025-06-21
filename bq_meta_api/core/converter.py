@@ -6,6 +6,7 @@ from bq_meta_api.core.entities import (
     ColumnSchema,
     SearchResultItem,
     QueryExecutionResult,
+    QueryDryRunResult,
 )
 
 
@@ -252,6 +253,61 @@ def convert_query_result_to_markdown(
 - テーブル名とカラム名が存在することを確認してください
 - 適切な権限があることを確認してください
 - まず小さなデータセットでテストしてください
+"""
+
+    return markdown_content
+
+
+def convert_dry_run_result_to_markdown(
+    result: QueryDryRunResult, project_id: str = None
+) -> str:
+    """ドライラン結果をマークダウン形式に変換する"""
+
+    def format_bytes(bytes_count: int) -> str:
+        """バイト数を人間が読みやすい形式にフォーマットする"""
+        for unit in ["B", "KB", "MB", "GB", "TB"]:
+            if bytes_count < 1024.0:
+                return f"{bytes_count:.1f} {unit}"
+            bytes_count /= 1024.0
+        return f"{bytes_count:.1f} PB"
+
+    scan_size = format_bytes(result.total_bytes_processed or 0)
+    bill_size = format_bytes(result.total_bytes_billed or 0)
+
+    status_icon = "✅" if result.is_safe else "⚠️"
+    status_text = "安全" if result.is_safe else "注意が必要"
+
+    markdown_content = f"""# BigQuery クエリ スキャン量チェック結果
+
+## チェック情報
+- **ステータス**: {status_icon} {status_text}
+- **プロジェクトID**: {project_id or "デフォルト"}
+
+## 予想リソース使用量
+- **処理予定バイト数**: {scan_size} ({result.total_bytes_processed or 0:,} bytes)
+- **課金予定バイト数**: {bill_size} ({result.total_bytes_billed or 0:,} bytes)
+
+## 安全性評価
+"""
+
+    if result.is_safe:
+        markdown_content += """✅ **このクエリは安全に実行できます**
+- スキャン量が設定された制限値以下です
+- そのまま実行しても問題ありません
+
+## 推奨事項
+- 必要に応じて `execute_query` ツールで実行してください
+"""
+    else:
+        markdown_content += """⚠️ **このクエリは大量のデータをスキャンします**
+- スキャン量が設定された制限値を超えています
+- 実行前に以下の点を検討してください
+
+## 推奨事項
+- WHERE句を追加してデータ量を絞り込む
+- パーティション化されたテーブルの場合、日付範囲を指定する
+- SELECT句で必要なカラムのみを指定する
+- LIMIT句を追加して結果行数を制限する
 """
 
     return markdown_content
