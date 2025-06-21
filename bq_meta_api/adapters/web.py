@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
     log_setting = log.init_logger()
     settings = config.init_setting()
     cache_data = await cache_manager.get_cached_data()
-    context = ApplicationContext(
+    ApplicationContext(
         settings=settings,
         log_setting=log_setting,
         cache_data=cache_data,
@@ -196,9 +196,8 @@ async def force_update_cache():
 # --- uvicorn で実行するための設定 ---
 # このファイルが直接実行された場合にuvicornを起動
 if __name__ == "__main__":
-    import uvicorn
 
     # main:app を指定するため、このファイル自体を実行するのではなく、
     # コマンドラインから `uvicorn bq_meta_api.main:app --reload --host 0.0.0.0 --port 8000` のように実行する
     print("サーバーを起動するには、以下のコマンドを実行してください:")
-    print(f"uvicorn bq_meta_api.adapters.web:app --reload")
+    print("uvicorn bq_meta_api.adapters.web:app --reload")

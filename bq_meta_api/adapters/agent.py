@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.gemini import GeminiModel
 import asyncio
