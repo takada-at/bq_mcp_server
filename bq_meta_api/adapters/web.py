@@ -196,7 +196,6 @@ async def force_update_cache():
 # --- uvicorn で実行するための設定 ---
 # このファイルが直接実行された場合にuvicornを起動
 if __name__ == "__main__":
-
     # main:app を指定するため、このファイル自体を実行するのではなく、
     # コマンドラインから `uvicorn bq_meta_api.main:app --reload --host 0.0.0.0 --port 8000` のように実行する
     print("サーバーを起動するには、以下のコマンドを実行してください:")
