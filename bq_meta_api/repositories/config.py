@@ -28,7 +28,9 @@ def init_setting() -> Settings:
     gcp_service_account_key_path = os.getenv("GCP_SERVICE_ACCOUNT_KEY_PATH", None)
     project_ids = os.getenv("PROJECT_IDS", "").split(",")
     cache_ttl_seconds = int(os.getenv("CACHE_TTL_SECONDS", 3600))
-    cache_file_base_dir = os.getenv("CACHE_FILE_BASE_DIR", str(root / ".bq_metadata_cache"))
+    cache_file_base_dir = os.getenv(
+        "CACHE_FILE_BASE_DIR", str(root / ".bq_metadata_cache")
+    )
     cache_file_base_dir = os.path.abspath(cache_file_base_dir)
     api_host = os.getenv("API_HOST", "127.0.0.1")
     api_port = int(os.getenv("API_PORT", 8000))
