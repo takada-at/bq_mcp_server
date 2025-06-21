@@ -187,7 +187,7 @@ async def force_update_cache():
                 status_code=500, detail="キャッシュの更新に失敗しました。"
             )
     except Exception as e:
-        logger.error("/cache/update エンドポイントでエラー: {e}", exc_info=True)
+        logger.error(f"/cache/update エンドポイントでエラー: {e}", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"キャッシュ更新中にエラーが発生しました: {e}"
         )
