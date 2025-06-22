@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
-from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.fastmcp import FastMCP
 from typing import Optional
 
 
@@ -20,21 +20,23 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[ApplicationContext]:
         log_setting=log_setting,
         cache_data=cache_data,
     )
+
     yield context
 
 
 mcp = FastMCP(
     "BigQuery Metadata API",
-    description="Provides access to BigQuery dataset, table, and schema information.",
+    description="Provides access to BigQuery dataset, table, and schema information, and allows safe query execution.",
     instructions="""Use search_metadata to search for metadata.
-Use get_datasets to retrieve a list of datasets and get_tables to retrieve a list of tables.""",
+Use get_datasets to retrieve a list of datasets and get_tables to retrieve a list of tables.
+Use execute_query to run BigQuery SQL with automatic safety checks and LIMIT clause management.""",
     lifespan=app_lifespan,
     version="0.1.0",
 )
 
 
 @mcp.tool("get_datasets")
-async def get_datasets(ctx: Context):
+async def get_datasets():
     """
     Get list of all datasets
     """
@@ -44,7 +46,7 @@ async def get_datasets(ctx: Context):
 
 
 @mcp.tool("get_tables")
-async def get_tables(ctx: Context, dataset_id: str, project_id: Optional[str] = None):
+async def get_tables(dataset_id: str, project_id: Optional[str] = None):
     """
     Get list of all tables in a dataset
     """
@@ -61,6 +63,33 @@ async def search_metadata(key: str):
     results = await search_engine.search_metadata(key)
     markdown_content = converter.convert_search_results_to_markdown(key, results)
     return markdown_content
+
+
+@mcp.tool("check_query_scan_amount")
+async def check_query_scan_amount(sql: str, project_id: Optional[str] = None):
+    """
+    Check the scan amount of a BigQuery SQL query using dry-run without executing it.
+
+    Args:
+        sql: The SQL query to check
+        project_id: Optional project ID to use for the query (defaults to first configured project)
+    """
+    result = await logic.check_query_scan_amount(sql, project_id)
+    return converter.convert_dry_run_result_to_markdown(result, project_id)
+
+
+@mcp.tool("execute_query")
+async def execute_query(sql: str, project_id: Optional[str] = None):
+    """
+    Execute BigQuery SQL with automatic safety checks and LIMIT clause management.
+
+    Args:
+        sql: The SQL query to execute
+        project_id: Optional project ID to use for the query (defaults to first configured project)
+    """
+    # フォース実行フラグは絶対にFalseにする。MCPでは抜け道できないようにする。
+    result = await logic.execute_query(sql, project_id, force=False)
+    return converter.convert_query_result_to_markdown(result, project_id)
 
 
 if __name__ == "__main__":

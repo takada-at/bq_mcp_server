@@ -35,6 +35,11 @@ def init_setting() -> Settings:
     api_host = os.getenv("API_HOST", "127.0.0.1")
     api_port = int(os.getenv("API_PORT", 8000))
 
+    # Query execution settings
+    max_scan_bytes = int(os.getenv("MAX_SCAN_BYTES", 1024 * 1024 * 1024))  # 1GB
+    default_query_limit = int(os.getenv("DEFAULT_QUERY_LIMIT", 10))
+    query_timeout_seconds = int(os.getenv("QUERY_TIMEOUT_SECONDS", 300))  # 5 minutes
+
     settings = Settings(
         gcp_service_account_key_path=gcp_service_account_key_path,
         project_ids=project_ids,
@@ -42,6 +47,9 @@ def init_setting() -> Settings:
         cache_file_base_dir=cache_file_base_dir,
         api_host=api_host,
         api_port=api_port,
+        max_scan_bytes=max_scan_bytes,
+        default_query_limit=default_query_limit,
+        query_timeout_seconds=query_timeout_seconds,
     )
     logger = log.get_logger()
 

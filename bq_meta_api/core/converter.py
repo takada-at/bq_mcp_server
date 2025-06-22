@@ -5,6 +5,8 @@ from bq_meta_api.core.entities import (
     TableMetadata,
     ColumnSchema,
     SearchResultItem,
+    QueryExecutionResult,
+    QueryDryRunResult,
 )
 
 
@@ -171,3 +173,141 @@ def convert_search_results_to_markdown(
         result.append("")
 
     return "\n".join(result)
+
+
+def convert_query_result_to_markdown(
+    result: QueryExecutionResult, project_id: str = None
+) -> str:
+    """クエリ実行結果をマークダウン形式に変換する"""
+
+    def format_bytes(bytes_count: int) -> str:
+        """バイト数を人間が読みやすい形式にフォーマットする"""
+        for unit in ["B", "KB", "MB", "GB", "TB"]:
+            if bytes_count < 1024.0:
+                return f"{bytes_count:.1f} {unit}"
+            bytes_count /= 1024.0
+        return f"{bytes_count:.1f} PB"
+
+    if result.success:
+        # 成功時の結果をフォーマット
+        scan_size = format_bytes(result.total_bytes_processed or 0)
+        bill_size = format_bytes(result.total_bytes_billed or 0)
+
+        # クエリ結果のテーブルを作成
+        table_content = ""
+        if result.rows and len(result.rows) > 0:
+            # 最初の行からカラム名を取得
+            columns = list(result.rows[0].keys())
+
+            # テーブルヘッダーを作成
+            table_content = "## クエリ結果\n\n"
+            table_content += "| " + " | ".join(columns) + " |\n"
+            table_content += "| " + " | ".join(["---"] * len(columns)) + " |\n"
+
+            # 行を追加（可読性のため最初の20行に制限）
+            for row in result.rows[:20]:
+                values = []
+                for col in columns:
+                    value = row.get(col, "")
+                    # 文字列に変換し、長すぎる場合は切り詰める
+                    str_value = str(value) if value is not None else ""
+                    if len(str_value) > 50:
+                        str_value = str_value[:47] + "..."
+                    values.append(str_value)
+                table_content += "| " + " | ".join(values) + " |\n"
+
+            if len(result.rows) > 20:
+                table_content += f"\n*... さらに {len(result.rows) - 20} 行*\n"
+
+        markdown_content = f"""# BigQuery クエリ実行結果
+
+## クエリ情報
+- **ステータス**: ✅ 成功
+- **プロジェクトID**: {project_id or "デフォルト"}
+- **ジョブID**: {result.job_id or "N/A"}
+- **実行時間**: {result.execution_time_ms or 0} ms
+
+## リソース使用量
+- **処理バイト数**: {scan_size} ({result.total_bytes_processed or 0:,} bytes)
+- **課金バイト数**: {bill_size} ({result.total_bytes_billed or 0:,} bytes)
+- **返された行数**: {result.total_rows or 0:,}
+
+{table_content}
+"""
+    else:
+        # エラー時の結果をフォーマット
+        markdown_content = f"""# BigQuery クエリ実行結果
+
+## クエリ情報
+- **ステータス**: ❌ 失敗
+- **プロジェクトID**: {project_id or "デフォルト"}
+- **実行時間**: {result.execution_time_ms or 0} ms
+
+## エラー詳細
+```
+{result.error_message or "不明なエラー"}
+```
+
+## 推奨事項
+- SQLの構文を確認してください
+- テーブル名とカラム名が存在することを確認してください
+- 適切な権限があることを確認してください
+- まず小さなデータセットでテストしてください
+"""
+
+    return markdown_content
+
+
+def convert_dry_run_result_to_markdown(
+    result: QueryDryRunResult, project_id: str = None
+) -> str:
+    """ドライラン結果をマークダウン形式に変換する"""
+
+    def format_bytes(bytes_count: int) -> str:
+        """バイト数を人間が読みやすい形式にフォーマットする"""
+        for unit in ["B", "KB", "MB", "GB", "TB"]:
+            if bytes_count < 1024.0:
+                return f"{bytes_count:.1f} {unit}"
+            bytes_count /= 1024.0
+        return f"{bytes_count:.1f} PB"
+
+    scan_size = format_bytes(result.total_bytes_processed or 0)
+    bill_size = format_bytes(result.total_bytes_billed or 0)
+
+    status_icon = "✅" if result.is_safe else "⚠️"
+    status_text = "安全" if result.is_safe else "注意が必要"
+
+    markdown_content = f"""# BigQuery クエリ スキャン量チェック結果
+
+## チェック情報
+- **ステータス**: {status_icon} {status_text}
+- **プロジェクトID**: {project_id or "デフォルト"}
+
+## 予想リソース使用量
+- **処理予定バイト数**: {scan_size} ({result.total_bytes_processed or 0:,} bytes)
+- **課金予定バイト数**: {bill_size} ({result.total_bytes_billed or 0:,} bytes)
+
+## 安全性評価
+"""
+
+    if result.is_safe:
+        markdown_content += """✅ **このクエリは安全に実行できます**
+- スキャン量が設定された制限値以下です
+- そのまま実行しても問題ありません
+
+## 推奨事項
+- 必要に応じて `execute_query` ツールで実行してください
+"""
+    else:
+        markdown_content += """⚠️ **このクエリは大量のデータをスキャンします**
+- スキャン量が設定された制限値を超えています
+- 実行前に以下の点を検討してください
+
+## 推奨事項
+- WHERE句を追加してデータ量を絞り込む
+- パーティション化されたテーブルの場合、日付範囲を指定する
+- SELECT句で必要なカラムのみを指定する
+- LIMIT句を追加して結果行数を制限する
+"""
+
+    return markdown_content
