@@ -323,6 +323,14 @@ async def update_cache() -> Optional[CachedData]:
     return new_cache_data
 
 
+async def fetch_and_save_dataset(project_id: str, dataset: Dict, bq_client, timestamp):
+    tables = await bigquery_client.fetch_tables_and_schemas(
+        bq_client, project_id, dataset.dataset_id
+    )
+    save_dataset_cache(project_id, dataset, tables, timestamp)
+    return dataset, tables
+
+
 async def update_cache_project(
     bq_client, project_id: str, logger, timestamp
 ) -> Tuple[str, List[DatasetMetadata], Dict[str, List[TableMetadata]]]:
@@ -333,16 +341,13 @@ async def update_cache_project(
     project_tables = {}
     tasks = [
         asyncio.create_task(
-            bigquery_client.fetch_tables_and_schemas(
-                bq_client, project_id, dataset.dataset_id
-            )
+            fetch_and_save_dataset(project_id, dataset, bq_client, timestamp)
         )
         for dataset in datasets
     ]
     results = await asyncio.gather(*tasks)
-    for dataset, tables in zip(datasets, results):
+    for dataset, tables in results:
         project_tables[project_id, dataset.dataset_id] = tables
-        save_dataset_cache(project_id, dataset, tables, timestamp)
     return project_id, datasets, project_tables
 
 
@@ -375,17 +380,9 @@ async def update_dataset_cache(project_id: str, dataset_id: str) -> bool:
 
     success = False
     try:
-        # データセット情報を取得
-        # Note: fetch_datasets returns ALL datasets in a project.
-        # This is inefficient if we only need one, but follows current structure.
-        # Consider a get_dataset_details method in bigquery_client if available & more direct.
-        datasets_in_project = await bigquery_client.fetch_datasets(
-            bq_client, project_id
+        dataset = await bigquery_client.get_dataset_detail(
+            bq_client, project_id, dataset_id
         )
-        dataset = next(
-            (ds for ds in datasets_in_project if ds.dataset_id == dataset_id), None
-        )
-
         if not dataset:
             logger.error(
                 f"データセット '{project_id}.{dataset_id}' がプロジェクト内で見つかりません。"

@@ -1,7 +1,7 @@
 # bigquery_client.py: Handles communication with Google BigQuery API
 import aiohttp
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Callable, Awaitable
 from gcloud.aio.bigquery import Dataset, Table
 from gcloud.aio.auth.token import Token
 from google.auth.exceptions import DefaultCredentialsError, RefreshError
@@ -65,17 +65,112 @@ def get_bigquery_client() -> Optional[Dataset]:
         return None
 
 
-async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetadata]:
-    """指定されたプロジェクトのデータセット一覧を非同期で取得します。"""
-    datasets_metadata = []
+async def _paginate_bigquery_api(
+    api_call: Callable[[Dict[str, Any]], Awaitable[Dict[str, Any]]],
+    items_key: str,
+    next_page_token_key: str = "nextPageToken",
+    operation_name: str = "API呼び出し",
+) -> List[Dict[str, Any]]:
+    """
+    BigQuery APIのページネーション処理を共通化する関数。
+
+    Args:
+        api_call: APIを呼び出す関数（paramsを受け取り、レスポンスを返す）
+        items_key: レスポンス内のアイテム配列のキー名
+        next_page_token_key: 次ページトークンのキー名
+        operation_name: ログ用の操作名
+
+    Returns:
+        全ページのアイテムのリスト
+    """
     logger = log.get_logger()
-    datasets_list = await Dataset(
-        project=project_id, session=client.session.session, token=client.token
-    ).list_datasets()
+    all_items = []
+    page_token = None
+    page_count = 0
+
+    while True:
+        page_count += 1
+        params = {"maxResults": 1000}
+        if page_token:
+            params["pageToken"] = page_token
+
+        logger.debug(f"{operation_name} (ページ {page_count})")
+
+        response = await api_call(params)
+        items = response.get(items_key, [])
+        all_items.extend(items)
+
+        # Check for next page
+        page_token = response.get(next_page_token_key)
+        if not page_token:
+            break
+
     logger.info(
-        f"プロジェクト '{project_id}' から {len(datasets_list)} 個のデータセット情報を取得しました。"
+        f"{operation_name}完了: {len(all_items)} 個のアイテムを {page_count} ページで取得"
     )
-    for dataset_data in datasets_list["datasets"]:
+    return all_items
+
+
+async def get_dataset_detail(
+    client: Dataset, project_id: str, dataset_id: str
+) -> Optional[DatasetMetadata]:
+    """指定されたプロジェクトとデータセットIDの詳細を非同期で取得します。"""
+    logger = log.get_logger()
+    try:
+        dataset = Dataset(
+            dataset_name=dataset_id,
+            project=project_id,
+            session=client.session.session,
+            token=client.token,
+        )
+        dataset_details = await dataset.get(session=client.session)
+        if not dataset_details:
+            logger.warning(f"データセット {project_id}.{dataset_id} が見つかりません。")
+            return None
+
+        ds_ref = dataset_details.get("datasetReference", {})
+        actual_project_id = ds_ref.get("projectId", project_id)
+        actual_dataset_id = ds_ref.get("datasetId")
+
+        if not actual_dataset_id:
+            logger.warning(
+                f"データセットIDが見つからないためスキップします: {dataset_details}"
+            )
+            return None
+
+        description = dataset_details.get("description")
+        metadata = DatasetMetadata(
+            project_id=actual_project_id,
+            dataset_id=actual_dataset_id,
+            description=description,
+            location=dataset_details.get("location"),
+        )
+        return metadata
+    except Exception as e:
+        logger.error(f"データセットの取得中にエラーが発生しました: {e}")
+        return None
+
+
+async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetadata]:
+    """指定されたプロジェクトのデータセット一覧を非同期で取得します。ページネーション対応。"""
+    logger = log.get_logger()
+
+    async def list_datasets_api(params: Dict[str, Any]) -> Dict[str, Any]:
+        """データセット一覧APIを呼び出す内部関数"""
+        return await Dataset(
+            project=project_id, session=client.session.session, token=client.token
+        ).list_datasets(params=params)
+
+    # ページネーション処理を共通関数で実行
+    datasets_list = await _paginate_bigquery_api(
+        api_call=list_datasets_api,
+        items_key="datasets",
+        next_page_token_key="nextPageToken",
+        operation_name=f"データセット一覧取得 (プロジェクト: {project_id})",
+    )
+
+    datasets_metadata = []
+    for dataset_data in datasets_list:
         # dataset_data is a dict. Example keys: 'kind', 'id', 'datasetReference', 'location'
         # 'id' is usually 'project:dataset'
         # 'datasetReference' is {'datasetId': '...', 'projectId': '...'}
@@ -146,22 +241,29 @@ def _parse_schema(schema_fields: List[dict]) -> List[ColumnSchema]:  # Changed t
 async def fetch_tables_and_schemas(
     client: Dataset, project_id: str, dataset_id: str
 ) -> List[TableMetadata]:
-    """指定されたデータセットのテーブル一覧と各テーブルのスキーマを取得します。"""
+    """指定されたデータセットのテーブル一覧と各テーブルのスキーマを取得します。ページネーション対応。"""
     logger = log.get_logger()
-    tables_metadata = []
     dataset = Dataset(
         dataset_name=dataset_id,
         project=project_id,
         session=client.session.session,
         token=client.token,
     )
-    # gcloud-aio-bigquery list_tables returns a list of dict-like objects
-    # Each dict contains: kind, id, tableReference, type, friendlyName, labels
-    tables_list = await dataset.list_tables()
-    logger.info(
-        f"データセット '{project_id}.{dataset_id}' から {len(tables_list)} 個のテーブル情報を取得しました。"
+
+    async def list_tables_api(params: Dict[str, Any]) -> Dict[str, Any]:
+        """テーブル一覧APIを呼び出す内部関数"""
+        return await dataset.list_tables(params=params)
+
+    # ページネーション処理を共通関数で実行（tables.listは'pageToken'を使用）
+    tables_list = await _paginate_bigquery_api(
+        api_call=list_tables_api,
+        items_key="tables",
+        next_page_token_key="pageToken",  # tables.listは'pageToken'を使用
+        operation_name=f"テーブル一覧取得 (データセット: {project_id}.{dataset_id})",
     )
-    for table_item_data in tables_list["tables"]:
+
+    tables_metadata = []
+    for table_item_data in tables_list:
         # table_item_data is a dict
         # 'tableReference': {'projectId': 'p', 'datasetId': 'd', 'tableId': 't'}
         tbl_ref = table_item_data.get("tableReference", {})
