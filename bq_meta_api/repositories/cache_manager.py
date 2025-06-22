@@ -318,8 +318,6 @@ async def update_cache() -> Optional[CachedData]:
         logger.debug("Closing aiohttp.ClientSession in update_cache.")
         await bigquery_client.close_client(bq_client)
 
-    new_cache_data = None
-
     return new_cache_data
 
 
