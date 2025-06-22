@@ -57,7 +57,6 @@ async def get_datasets() -> DatasetListResponse:
 
 async def get_datasets_by_project(project_id: str) -> DatasetListResponse:
     """指定されたプロジェクトのデータセット一覧を返す"""
-    logger = log.get_logger()
     cache = await get_current_cache()
     if project_id not in cache.datasets:
         raise HTTPException(
@@ -116,58 +115,6 @@ async def get_tables(
             )
 
         return found_tables
-
-
-async def check_query_scan_amount(
-    sql: str, project_id: Optional[str] = None
-) -> QueryDryRunResult:
-    """BigQueryクエリのスキャン量を事前にチェックする（元のクエリのまま）"""
-    logger = log.get_logger()
-    settings = config.get_settings()
-
-    try:
-        query_executor = QueryExecutor(settings)
-        result = await query_executor.check_scan_amount(sql, project_id)
-
-        logger.info(f"スキャン量チェック完了: {result.total_bytes_processed:,} bytes")
-        return result
-
-    except HTTPException as http_exc:
-        logger.error(f"スキャン量チェックでHTTPエラー: {http_exc.detail}")
-        raise http_exc
-    except Exception as e:
-        logger.error(f"スキャン量チェックでエラーが発生しました: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"スキャン量チェック中にエラーが発生しました: {str(e)}",
-        )
-
-
-async def execute_query(
-    sql: str, project_id: Optional[str] = None, force: bool = False
-) -> QueryExecutionResult:
-    """BigQueryクエリを安全に実行する"""
-
-    logger = log.get_logger()
-    settings = config.get_settings()
-
-    try:
-        query_executor = QueryExecutor(settings)
-        result = await query_executor.execute_query(
-            sql, project_id, force_execute=force
-        )
-
-        if result.success:
-            logger.info(f"クエリ実行成功 - 結果行数: {result.total_rows}")
-        else:
-            logger.warning(f"クエリ実行失敗: {result.error_message}")
-
-        return result
-    except Exception as e:
-        logger.error(f"クエリ実行中にエラーが発生: {e}")
-        raise HTTPException(
-            status_code=500, detail="クエリ実行中に内部エラーが発生しました。"
-        )
 
 
 async def check_query_scan_amount(
