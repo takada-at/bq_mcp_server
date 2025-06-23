@@ -23,7 +23,8 @@ async def get_current_cache() -> CachedData:
         return cache
     # キャッシュが無効または存在しない場合は更新を試みる
     logger.info("キャッシュが無効または存在しないため、更新を試みます...")
-    updated_cache = cache_manager.update_cache()
+    # cache_manager.update_cache() is now async
+    updated_cache = await cache_manager.update_cache()
     if not updated_cache:
         logger.error("キャッシュの更新に失敗しました。")
         raise HTTPException(
@@ -56,25 +57,13 @@ async def get_datasets() -> DatasetListResponse:
 
 async def get_datasets_by_project(project_id: str) -> DatasetListResponse:
     """指定されたプロジェクトのデータセット一覧を返す"""
-    logger = log.get_logger()
-    try:
-        cache = await get_current_cache()
-        if project_id not in cache.datasets:
-            raise HTTPException(
-                status_code=404,
-                detail=f"プロジェクト '{project_id}' は見つかりません。",
-            )
-        return DatasetListResponse(datasets=cache.datasets[project_id])
-    except HTTPException:  # Specific HTTPException should be re-raised
-        raise
-    except Exception as e:
-        logger.error(
-            f"プロジェクト '{project_id}' のデータセット一覧の取得中にエラーが発生: {e}"
-        )
+    cache = await get_current_cache()
+    if project_id not in cache.datasets:
         raise HTTPException(
-            status_code=503,
-            detail=f"プロジェクト '{project_id}' のデータセット一覧の取得に失敗しました。",
+            status_code=404,
+            detail=f"プロジェクト '{project_id}' は見つかりません。",
         )
+    return DatasetListResponse(datasets=cache.datasets[project_id])
 
 
 async def get_tables(
@@ -90,53 +79,42 @@ async def get_tables(
         HTTPException: プロジェクトまたはデータセットが見つからない場合
     """
     found_tables: List[TableMetadata] = []
-    logger = log.get_logger()
-
-    try:
-        if project_id:
-            # プロジェクトIDが指定されている場合、そのデータセットのキャッシュを直接取得
-            dataset, tables = cache_manager.get_cached_dataset_data(
-                project_id, dataset_id
+    if project_id:
+        # プロジェクトIDが指定されている場合、そのデータセットのキャッシュを直接取得
+        # cache_manager.get_cached_dataset_data is now async
+        dataset, tables = await cache_manager.get_cached_dataset_data(
+            project_id, dataset_id
+        )
+        if dataset is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"データセット '{project_id}.{dataset_id}' は見つかりません。",
             )
-            if dataset is None:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"データセット '{project_id}.{dataset_id}' は見つかりません。",
+        return tables
+    else:
+        # プロジェクトIDが指定されていない場合、すべてのプロジェクトから検索
+        cache = await get_current_cache()
+        found_dataset = False
+        settings = config.get_settings()
+        print("cache", cache)
+
+        for proj_id in settings.project_ids:
+            if proj_id in cache.tables and dataset_id in cache.tables[proj_id]:
+                found_dataset = True
+                # cache_manager.get_cached_dataset_data is now async
+                dataset, tables = await cache_manager.get_cached_dataset_data(
+                    proj_id, dataset_id
                 )
-            return tables
-        else:
-            # プロジェクトIDが指定されていない場合、すべてのプロジェクトから検索
-            cache = await get_current_cache()  # Added await
-            found_dataset = False
-            settings = config.get_settings()
+                if dataset is not None and tables:
+                    found_tables.extend(tables)
 
-            for proj_id in settings.project_ids:
-                if proj_id in cache.tables and dataset_id in cache.tables[proj_id]:
-                    found_dataset = True
-                    dataset, tables = cache_manager.get_cached_dataset_data(
-                        proj_id, dataset_id
-                    )
-                    if dataset is not None and tables:
-                        found_tables.extend(tables)
+        if not found_dataset:
+            raise HTTPException(
+                status_code=404,
+                detail=f"データセット '{dataset_id}' は見つかりません。",
+            )
 
-            if not found_dataset:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"データセット '{dataset_id}' は見つかりません。",
-                )
-
-            return found_tables
-    except HTTPException:  # Specific HTTPException should be re-raised
-        raise
-    except Exception as e:
-        project_info = f"{project_id}." if project_id else ""
-        logger.error(
-            f"テーブル一覧の取得中にエラーが発生: {project_info}{dataset_id}, {e}"
-        )
-        raise HTTPException(
-            status_code=503,
-            detail=f"データセット '{project_info}{dataset_id}' のテーブル一覧の取得に失敗しました。",
-        )
+        return found_tables
 
 
 async def check_query_scan_amount(

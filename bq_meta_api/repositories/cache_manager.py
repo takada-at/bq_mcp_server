@@ -1,4 +1,5 @@
 # cache_manager.py: Manages local caching of BigQuery metadata
+import asyncio
 import json
 import datetime
 from pathlib import Path
@@ -263,60 +264,94 @@ def is_dataset_cache_valid(project_id: str, dataset_id: str) -> bool:
         return False
 
 
-def update_cache() -> Optional[CachedData]:
+async def update_cache() -> Optional[CachedData]:
     """
-    BigQueryから最新のメタデータを取得し、新しいキャッシュデータを作成して返します。
+    BigQueryから最新のメタデータを非同期で取得し、新しいキャッシュデータを作成して返します。
     取得に失敗した場合はNoneを返します。
     """
     global _cache
     logger = log.get_logger()
-    logger.info("キャッシュの更新を開始します...")
+    logger.info("非同期キャッシュの更新を開始します...")
     settings = config.get_settings()
+
     bq_client = bigquery_client.get_bigquery_client()
     if not bq_client:
-        logger.error("キャッシュ更新のためBigQueryクライアントを取得できませんでした。")
+        logger.error(
+            "キャッシュ更新のためBigQueryクライアントとセッションを取得できませんでした。"
+        )
         return None
+
     if not settings.project_ids:
         logger.warning("キャッシュ更新対象のプロジェクトIDが設定されていません。")
-        return CachedData(
-            last_updated=datetime.datetime.now(datetime.timezone.utc)
-        )  # 空のキャッシュを返す
-
+        return CachedData(last_updated=datetime.datetime.now(datetime.timezone.utc))
     all_datasets: Dict[str, List[DatasetMetadata]] = {}
     all_tables: Dict[str, Dict[str, List[TableMetadata]]] = {}
     timestamp = datetime.datetime.now(datetime.timezone.utc)
-
-    for project_id in settings.project_ids:
-        logger.info(f"プロジェクト '{project_id}' のメタデータを取得中...")
-        datasets = bigquery_client.fetch_datasets(bq_client, project_id)
-        all_datasets[project_id] = datasets
-        all_tables[project_id] = {}
-
-        for dataset in datasets:
-            logger.info(
-                f"データセット '{project_id}.{dataset.dataset_id}' のテーブルを取得中..."
+    try:
+        tasks = []
+        for project_id in settings.project_ids:
+            logger.info(f"プロジェクト '{project_id}' のメタデータを非同期取得中...")
+            task = asyncio.create_task(
+                update_cache_project(bq_client, project_id, logger, timestamp)
             )
-            tables = bigquery_client.fetch_tables_and_schemas(
-                bq_client, project_id, dataset.dataset_id
-            )
-            all_tables[project_id][dataset.dataset_id] = tables
+            tasks.append(task)
+        results = await asyncio.gather(*tasks)
+        for project_id, datasets, project_tables in results:
+            all_datasets[project_id] = datasets
+            for project_id, dataset_id in project_tables.keys():
+                if project_id not in all_tables:
+                    all_tables[project_id] = {}
+                if dataset_id not in all_tables[project_id]:
+                    all_tables[project_id][dataset_id] = project_tables[
+                        project_id, dataset_id
+                    ]
+            logger.info(f"プロジェクト '{project_id}' のメタデータ取得が完了しました。")
 
-            # 各データセットごとにキャッシュを保存
-            save_dataset_cache(project_id, dataset, tables, timestamp)
+        new_cache_data = CachedData(
+            datasets=all_datasets,
+            tables=all_tables,
+            last_updated=timestamp,
+        )
+        logger.info("非同期キャッシュの更新が完了しました。")
+        _cache = new_cache_data  # メモリキャッシュを更新
+    finally:
+        logger.debug("Closing aiohttp.ClientSession in update_cache.")
+        await bigquery_client.close_client(bq_client)
 
-    new_cache_data = CachedData(
-        datasets=all_datasets,
-        tables=all_tables,
-        last_updated=timestamp,
-    )
-    logger.info("キャッシュの更新が完了しました。")
-    _cache = new_cache_data  # メモリキャッシュを更新
     return new_cache_data
 
 
-def update_dataset_cache(project_id: str, dataset_id: str) -> bool:
+async def fetch_and_save_dataset(project_id: str, dataset: Dict, bq_client, timestamp):
+    tables = await bigquery_client.fetch_tables_and_schemas(
+        bq_client, project_id, dataset.dataset_id
+    )
+    save_dataset_cache(project_id, dataset, tables, timestamp)
+    return dataset, tables
+
+
+async def update_cache_project(
+    bq_client, project_id: str, logger, timestamp
+) -> Tuple[str, List[DatasetMetadata], Dict[str, List[TableMetadata]]]:
+    datasets = await bigquery_client.fetch_datasets(bq_client, project_id)
+    logger.info(
+        f"プロジェクト '{project_id}' から {len(datasets)} 個のデータセット情報を取得しました。"
+    )
+    project_tables = {}
+    tasks = [
+        asyncio.create_task(
+            fetch_and_save_dataset(project_id, dataset, bq_client, timestamp)
+        )
+        for dataset in datasets
+    ]
+    results = await asyncio.gather(*tasks)
+    for dataset, tables in results:
+        project_tables[project_id, dataset.dataset_id] = tables
+    return project_id, datasets, project_tables
+
+
+async def update_dataset_cache(project_id: str, dataset_id: str) -> bool:
     """
-    特定のデータセットのキャッシュを更新します。
+    特定のデータセットのキャッシュを非同期で更新します。
 
     Args:
         project_id: プロジェクトID
@@ -326,40 +361,54 @@ def update_dataset_cache(project_id: str, dataset_id: str) -> bool:
         更新に成功した場合はTrue、失敗した場合はFalse
     """
     logger = log.get_logger()
-    logger.info(f"データセット '{project_id}.{dataset_id}' のキャッシュを更新中...")
-    bq_client = bigquery_client.get_bigquery_client()
-    if not bq_client:
-        logger.error("BigQueryクライアントを取得できませんでした。")
+    logger.info(
+        f"データセット '{project_id}.{dataset_id}' の非同期キャッシュ更新を開始..."
+    )
+
+    client_session_tuple = bigquery_client.get_bigquery_client()
+    if not client_session_tuple:
+        logger.error("BigQueryクライアントとセッションを取得できませんでした。")
         return False
 
+    bq_client, session = client_session_tuple
+
+    if not session:
+        logger.error("aiohttp.ClientSessionが取得できませんでした。")
+        return False
+
+    success = False
     try:
-        # データセット情報を取得
-        datasets = bigquery_client.fetch_datasets(bq_client, project_id)
-        dataset = next((ds for ds in datasets if ds.dataset_id == dataset_id), None)
+        dataset = await bigquery_client.get_dataset_detail(
+            bq_client, project_id, dataset_id
+        )
         if not dataset:
-            logger.error(f"データセット '{project_id}.{dataset_id}' が見つかりません。")
-            return False
+            logger.error(
+                f"データセット '{project_id}.{dataset_id}' がプロジェクト内で見つかりません。"
+            )
+            return False  # success remains False
 
         # テーブル情報を取得
-        tables = bigquery_client.fetch_tables_and_schemas(
+        tables = await bigquery_client.fetch_tables_and_schemas(
             bq_client, project_id, dataset_id
         )
 
-        # キャッシュを保存
-        save_dataset_cache(project_id, dataset, tables)
+        # キャッシュを保存 (save_dataset_cache is synchronous)
+        current_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        save_dataset_cache(project_id, dataset, tables, current_timestamp)
 
-        # グローバルキャッシュがある場合は更新
+        # グローバルメモリキャッシュがある場合は更新
         global _cache
         if _cache:
             if project_id not in _cache.datasets:
                 _cache.datasets[project_id] = []
+                _cache.tables[project_id] = {}  # Ensure tables dict for project exists
 
             # 既存のデータセット情報を更新または追加
             ds_idx = next(
                 (
                     i
-                    for i, ds in enumerate(_cache.datasets[project_id])
-                    if ds.dataset_id == dataset_id
+                    for i, ds_item in enumerate(_cache.datasets.get(project_id, []))
+                    if ds_item.dataset_id == dataset_id
                 ),
                 None,
             )
@@ -369,45 +418,54 @@ def update_dataset_cache(project_id: str, dataset_id: str) -> bool:
                 _cache.datasets[project_id].append(dataset)
 
             # テーブル情報を更新
-            if project_id not in _cache.tables:
-                _cache.tables[project_id] = {}
             _cache.tables[project_id][dataset_id] = tables
-
-            # 最終更新時刻を更新
-            _cache.last_updated = datetime.datetime.now(datetime.timezone.utc)
+            _cache.last_updated = current_timestamp  # Update global cache timestamp
 
         logger.info(
-            f"データセット '{project_id}.{dataset_id}' のキャッシュを更新しました。"
+            f"データセット '{project_id}.{dataset_id}' の非同期キャッシュを更新しました。"
         )
-        return True
+        success = True
 
     except Exception as e:
-        logger.error(f"データセットキャッシュの更新中にエラーが発生: {e}")
-        return False
+        logger.error(
+            f"データセット '{project_id}.{dataset_id}' の非同期キャッシュ更新中にエラーが発生: {e}"
+        )
+        success = False
+    finally:
+        logger.debug(
+            f"Closing aiohttp.ClientSession in update_dataset_cache for {project_id}.{dataset_id}."
+        )
+        await session.close()
+
+    return success
 
 
 async def get_cached_data() -> Optional[CachedData]:
     """
-    有効なキャッシュデータを取得します。
+    有効なキャッシュデータを非同期で取得します。
     キャッシュが存在しないか無効な場合は、更新を試みます。
     """
-    cached_data = load_cache()
+    cached_data = (
+        load_cache()
+    )  # load_cache is sync and also checks validity internally somewhat
     logger = log.get_logger()
-    if cached_data:  # is_cache_valid は load_cache 内でチェック済み
-        logger.info("有効なキャッシュが見つかりました。")
+    # load_cache() can return None if no valid cache files are found or they are expired.
+    # is_cache_valid() provides an explicit check on the loaded _cache (if any).
+    if is_cache_valid(cached_data):  # Explicitly check the loaded cache
+        logger.info("有効なメモリキャッシュまたはファイルキャッシュが見つかりました。")
         return cached_data
     else:
-        logger.info("有効なキャッシュが見つからないため、更新を試みます。")
-        return update_cache()
+        logger.info("有効なキャッシュが見つからないため、非同期更新を試みます。")
+        # update_cache() is now async
+        return await update_cache()
 
 
-# --- 新しい関数 ---
-def get_cached_dataset_data(
+async def get_cached_dataset_data(
     project_id: str, dataset_id: str
 ) -> Tuple[Optional[DatasetMetadata], List[TableMetadata]]:
     """
-    特定のデータセットとそのテーブルのキャッシュデータを取得します。
-    キャッシュが無効な場合は更新します。
+    特定のデータセットとそのテーブルのキャッシュデータを非同期で取得します。
+    キャッシュが無効な場合は非同期で更新します。
 
     Args:
         project_id: プロジェクトID
@@ -418,12 +476,22 @@ def get_cached_dataset_data(
         データセットが見つからない場合は(None, [])を返します
     """
     logger = log.get_logger()
-    # キャッシュが有効かチェック
+    # is_dataset_cache_valid is sync
     if not is_dataset_cache_valid(project_id, dataset_id):
-        # キャッシュを更新
-        if not update_dataset_cache(project_id, dataset_id):
+        logger.info(
+            f"データセット '{project_id}.{dataset_id}' のキャッシュが無効または存在しないため、非同期更新を試みます。"
+        )
+        # update_dataset_cache is now async
+        updated_successfully = await update_dataset_cache(project_id, dataset_id)
+        if not updated_successfully:
+            logger.warning(
+                f"データセット '{project_id}.{dataset_id}' のキャッシュ更新に失敗しました。"
+            )
             return None, []
+        # After successful update, the cache file should be readable.
 
+    # If cache was valid or updated successfully, try to load from file.
+    # This part remains synchronous as it's file I/O.
     try:
         cache_file = get_cache_file_path(project_id, dataset_id)
         with open(cache_file, "r", encoding="utf-8") as f:

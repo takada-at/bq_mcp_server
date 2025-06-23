@@ -52,6 +52,7 @@ async def test_get_current_cache_loaded_after_none(mock_cache_manager, mock_get_
         datasets={"p1": [dataset_meta]}, tables={}
     )  # Assuming datasets is Dict[str, List[DatasetMetadata]]
     mock_cache_manager.load_cache.return_value = None
+    mock_cache_manager.update_cache = AsyncMock()
     mock_cache_manager.update_cache.return_value = updated_cache
 
     # Call function
@@ -88,6 +89,7 @@ async def test_get_current_cache_loaded_after_invalid(
     )  # Assuming datasets is Dict[str, List[DatasetMetadata]]
     mock_cache_manager.load_cache.return_value = initial_cache
     mock_cache_manager.is_cache_valid.return_value = False
+    mock_cache_manager.update_cache = AsyncMock()
     mock_cache_manager.update_cache.return_value = updated_cache
 
     # Call function
@@ -115,6 +117,7 @@ async def test_get_current_cache_update_fails(mock_cache_manager, mock_get_logge
     mock_get_logger.return_value = mock_logger
 
     mock_cache_manager.load_cache.return_value = None
+    mock_cache_manager.update_cache = AsyncMock()
     mock_cache_manager.update_cache.return_value = None
 
     # Call function and assert exception
@@ -342,35 +345,6 @@ async def test_get_datasets_by_project_http_exception_propagates(
 
 @pytest.mark.asyncio
 @patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.get_current_cache", new_callable=AsyncMock)
-async def test_get_datasets_by_project_generic_exception_triggers_http_exception(
-    mock_get_current_cache, mock_get_logger
-):
-    # Setup mocks
-    mock_logger = MagicMock()
-    mock_get_logger.return_value = mock_logger
-    original_exception = RuntimeError("Unexpected error")
-    mock_get_current_cache.side_effect = original_exception
-    project_id_to_test = "any_project"
-
-    # Call function and assert exception
-    with pytest.raises(HTTPException) as exc_info:
-        await logic.get_datasets_by_project(project_id_to_test)
-
-    # Assertions
-    assert exc_info.value.status_code == 503
-    assert (
-        exc_info.value.detail
-        == f"プロジェクト '{project_id_to_test}' のデータセット一覧の取得に失敗しました。"
-    )  # Updated to Japanese
-    mock_get_current_cache.assert_called_once()
-    mock_logger.error.assert_called_once_with(
-        f"プロジェクト '{project_id_to_test}' のデータセット一覧の取得中にエラーが発生: {original_exception}"  # Updated to Japanese, removed exc_info=True
-    )
-
-
-@pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
 @patch("bq_meta_api.core.logic.cache_manager")
 @patch(
     "bq_meta_api.core.logic.get_current_cache", new_callable=AsyncMock
@@ -400,6 +374,7 @@ async def test_get_tables_project_id_provided_dataset_found(
     # It seems table lists are managed separately in CachedData.tables or fetched.
     # For this test, get_cached_dataset_data should return the dataset_meta and its associated tables.
 
+    mock_cache_manager.get_cached_dataset_data = AsyncMock()
     mock_cache_manager.get_cached_dataset_data.return_value = (
         dataset_meta,
         expected_tables,
@@ -429,6 +404,7 @@ async def test_get_tables_project_id_provided_dataset_not_found(
     dataset_id = "d1"
     project_id = "p1"
 
+    mock_cache_manager.get_cached_dataset_data = AsyncMock()
     mock_cache_manager.get_cached_dataset_data.return_value = (None, [])
 
     # Call function and assert exception
@@ -497,10 +473,9 @@ async def test_get_tables_no_project_id_dataset_found(
             return (dataset_meta, expected_tables)
         return (None, [])
 
-    mock_cache_manager.get_cached_dataset_data.side_effect = (
-        get_cached_dataset_data_side_effect
+    mock_cache_manager.get_cached_dataset_data = AsyncMock(
+        side_effect=get_cached_dataset_data_side_effect
     )
-
     # Call function
     actual_tables = await logic.get_tables(dataset_id_to_find)
 
@@ -542,6 +517,7 @@ async def test_get_tables_no_project_id_dataset_not_found(
         },  # d3 is not here
     )
     mock_get_current_cache.return_value = mock_cache_data
+    mock_cache_manager.get_cached_dataset_data = AsyncMock()
     mock_cache_manager.get_cached_dataset_data.return_value = (
         None,
         [],
@@ -599,71 +575,3 @@ async def test_get_tables_no_project_id_get_current_cache_http_exception(
     assert exc_info.value.status_code == expected_exception.status_code
     assert exc_info.value.detail == expected_exception.detail
     mock_get_current_cache.assert_called_once()
-
-
-@pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.config")  # Mock config as it's used in the function
-@patch("bq_meta_api.core.logic.get_current_cache", new_callable=AsyncMock)
-async def test_get_tables_no_project_id_get_current_cache_generic_exception(
-    mock_get_current_cache, mock_config, mock_get_logger
-):
-    # Setup mocks
-    mock_logger = MagicMock()
-    mock_get_logger.return_value = mock_logger
-    dataset_id = "any_dataset"
-    original_exception = ValueError("Something went wrong with cache loading")
-    mock_get_current_cache.side_effect = original_exception
-
-    mock_settings = MagicMock()  # Settings are needed for the function path
-    mock_settings.project_ids = ["p1"]
-    mock_config.get_settings.return_value = mock_settings
-
-    # Call function and assert exception
-    with pytest.raises(HTTPException) as exc_info:
-        await logic.get_tables(dataset_id)
-
-    # Assertions
-    assert exc_info.value.status_code == 503
-    assert (
-        exc_info.value.detail
-        == f"データセット '{dataset_id}' のテーブル一覧の取得に失敗しました。"
-    )  # Updated to Japanese
-    mock_get_current_cache.assert_called_once()
-    mock_logger.error.assert_called_once_with(
-        f"テーブル一覧の取得中にエラーが発生: {dataset_id}, {original_exception}"  # Updated to Japanese
-        # Removed exc_info=True as it's not in the actual log call in logic.py
-    )
-
-
-@pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.cache_manager")
-async def test_get_tables_project_id_provided_generic_exception(
-    mock_cache_manager, mock_get_logger
-):
-    # Setup mocks
-    mock_logger = MagicMock()
-    mock_get_logger.return_value = mock_logger
-    dataset_id = "d1"
-    project_id = "p1"
-    original_exception = RuntimeError("Underlying storage issue")
-    mock_cache_manager.get_cached_dataset_data.side_effect = original_exception
-
-    # Call function and assert exception
-    with pytest.raises(HTTPException) as exc_info:
-        await logic.get_tables(dataset_id, project_id)
-
-    # Assertions
-    assert exc_info.value.status_code == 503
-    assert (
-        exc_info.value.detail
-        == f"データセット '{project_id}.{dataset_id}' のテーブル一覧の取得に失敗しました。"
-    )  # Updated to Japanese
-    mock_cache_manager.get_cached_dataset_data.assert_called_once_with(
-        project_id, dataset_id
-    )  # Corrected argument order
-    mock_logger.error.assert_called_once_with(
-        f"テーブル一覧の取得中にエラーが発生: {project_id}.{dataset_id}, {original_exception}"  # Updated to Japanese
-        # Removed exc_info=True as it's not in the actual log call in logic.py
-    )
