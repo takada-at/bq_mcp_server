@@ -1,10 +1,11 @@
 # /// script
-# requires-python = ">=3.11"
+# requires-python = ">=3.10"
 # dependencies = [
 #     "gcloud-aio-bigquery>=7.1.0",
 #     "google-cloud-bigquery>=3.31.0",
 #     "pydantic>=2.11.3",
 #     "python-dotenv>=1.1.0",
+#     "mcp[cli]>=1.6.0",
 # ]
 # ///
 from contextlib import asynccontextmanager
@@ -96,7 +97,7 @@ async def execute_query(sql: str, project_id: Optional[str] = None):
         sql: The SQL query to execute
         project_id: Optional project ID to use for the query (defaults to first configured project)
     """
-    # フォース実行フラグは絶対にFalseにする。MCPでは抜け道できないようにする。
+    # Force execution flag is always set to False. No workarounds allowed in MCP.
     result = await logic.execute_query(sql, project_id, force=False)
     return converter.convert_query_result_to_markdown(result, project_id)
 

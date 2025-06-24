@@ -11,17 +11,17 @@ from bq_mcp.core.entities import (
 
 
 def convert_datasets_to_markdown(datasets: List[DatasetMetadata]) -> str:
-    """データセットメタデータリストをマークダウン形式に変換する"""
+    """Convert dataset metadata list to markdown format"""
     result = []
     for dataset in datasets:
-        # データセット名をヘッダーとして追加
+        # Add dataset name as header
         result.append(f"## Dataset: `{dataset.project_id}.{dataset.dataset_id}`\n")
 
-        # データセットの説明があれば追加
+        # Add dataset description if exists
         if dataset.description:
             result.append(f"{dataset.description}\n")
 
-        # データセットのロケーションがあれば追加
+        # Add dataset location if exists
         if dataset.location:
             result.append(f"**Location:** {dataset.location}\n")
 
@@ -29,36 +29,36 @@ def convert_datasets_to_markdown(datasets: List[DatasetMetadata]) -> str:
 
 
 def convert_tables_to_markdown(tables: List[TableMetadata]) -> str:
-    """テーブルメタデータリストをマークダウン形式に変換する"""
+    """Convert table metadata list to markdown format"""
     result = []
 
     for table in tables:
-        # テーブル名をヘッダーとして追加
+        # Add table name as header
         result.append(f"### Table: `{table.full_table_id}`\n")
 
-        # テーブルの説明があれば追加
+        # Add table description if exists
         if table.description:
             result.append(f"{table.description}\n")
 
-        # スキーマ情報があればテーブル形式で表示
+        # Display schema information in table format if exists
         if (
             hasattr(table, "schema_")
             and table.schema_
             and hasattr(table.schema_, "columns")
             and table.schema_.columns
         ):
-            result.append("| カラム名 | データ型 | モード | 詳細 |")
+            result.append("| Column Name | Data Type | Mode | Details |")
             result.append("|---------|---------|--------|------|")
 
             for column in table.schema_.columns:
                 desc = column.description or ""
 
-                # ネストされたフィールドがある場合は特別な表示
+                # Special display for nested fields
                 if column.fields:
                     result.append(
                         f"| {column.name} | {column.type} | {column.mode} | {desc} |"
                     )
-                    # 折りたたみセクションとしてネストを表示
+                    # Display nested fields as collapsible section
                     nested_fields_md = _convert_nested_fields_to_markdown(column.fields)
                     result.append(nested_fields_md)
                 else:
@@ -66,9 +66,9 @@ def convert_tables_to_markdown(tables: List[TableMetadata]) -> str:
                         f"| {column.name} | {column.type} | {column.mode} | {desc} |"
                     )
 
-            result.append("\n")  # テーブル後の空行
+            result.append("\n")  # Empty line after table
 
-        # テーブル間の区切り
+        # Separator between tables
         result.append("\n")
 
     return "\n".join(result)
@@ -77,27 +77,27 @@ def convert_tables_to_markdown(tables: List[TableMetadata]) -> str:
 def _convert_nested_fields_to_markdown(
     fields: List[ColumnSchema], indent_level: int = 0
 ) -> str:
-    """ネストされたフィールドをマークダウン形式の折りたたみセクションに変換する"""
+    """Convert nested fields to markdown collapsible section"""
     result = []
     indent = "  " * indent_level
 
-    # 折りたたみセクションの開始
-    result.append("<details><summary>▶︎ ネストを見る</summary>\n")
+    # Start collapsible section
+    result.append("<details><summary>▶︎ View nested fields</summary>\n")
 
-    # ネストされた各フィールドを箇条書きで表示
+    # Display each nested field as bullet point
     for field in fields:
         description = f": {field.description}" if field.description else ""
         result.append(
             f"{indent}- **{field.name}** ({field.type}, {field.mode}){description}"
         )
 
-        # さらにネストがある場合は再帰的に処理
+        # Recursively process if further nesting exists
         if field.fields:
             result.append(
-                f"{indent}  <details><summary>▶︎ {field.name} の詳細</summary>\n"
+                f"{indent}  <details><summary>▶︎ {field.name} details</summary>\n"
             )
 
-            # 2階層目以降のネスト
+            # Second level and deeper nesting
             for nested_field in field.fields:
                 nested_desc = (
                     f": {nested_field.description}" if nested_field.description else ""
@@ -106,9 +106,9 @@ def _convert_nested_fields_to_markdown(
                     f"{indent}  - **{nested_field.name}** ({nested_field.type}, {nested_field.mode}){nested_desc}"
                 )
 
-                # 3階層目以降のネスト（必要に応じて再帰処理も可能）
+                # Third level and deeper nesting (recursive processing possible if needed)
                 if nested_field.fields:
-                    # 現在のバージョンでは3階層目以降は単純なリストで表示
+                    # In current version, third level and deeper are displayed as simple list
                     for deep_nested in nested_field.fields:
                         deep_desc = (
                             f": {deep_nested.description}"
@@ -121,7 +121,7 @@ def _convert_nested_fields_to_markdown(
 
             result.append(f"\n{indent}  </details>\n")
 
-    # 折りたたみセクションの終了
+    # End collapsible section
     result.append("\n</details>\n")
 
     return "\n".join(result)
@@ -130,45 +130,45 @@ def _convert_nested_fields_to_markdown(
 def convert_search_results_to_markdown(
     query: str, results: List[SearchResultItem]
 ) -> str:
-    """検索結果をマークダウン形式に変換する"""
+    """Convert search results to markdown format"""
     result = []
 
-    # 検索結果のヘッダーとして検索クエリを表示
-    result.append(f"## 検索結果: `{query}`\n")
-    result.append(f"**{len(results)}** 件のヒットがありました。\n")
+    # Display search query as search results header
+    result.append(f"## Search Results: `{query}`\n")
+    result.append(f"Found **{len(results)}** results.\n")
 
-    # データセット、テーブル、カラムごとにグループ化して表示
+    # Group and display by datasets, tables, and columns
     datasets = [r for r in results if r.type == "dataset"]
     tables = [r for r in results if r.type == "table"]
     columns = [r for r in results if r.type == "column"]
 
-    # データセットの検索結果
+    # Dataset search results
     if datasets:
-        result.append("### データセット\n")
+        result.append("### Datasets\n")
         for item in datasets:
-            match_info = "名前" if item.match_location == "name" else "説明"
+            match_info = "name" if item.match_location == "name" else "description"
             result.append(
-                f"- **{item.project_id}.{item.dataset_id}** ({match_info}に一致)"
+                f"- **{item.project_id}.{item.dataset_id}** (matched in {match_info})"
             )
         result.append("")
 
-    # テーブルの検索結果
+    # Table search results
     if tables:
-        result.append("### テーブル\n")
+        result.append("### Tables\n")
         for item in tables:
-            match_info = "名前" if item.match_location == "name" else "説明"
+            match_info = "name" if item.match_location == "name" else "description"
             result.append(
-                f"- **{item.project_id}.{item.dataset_id}.{item.table_id}** ({match_info}に一致)"
+                f"- **{item.project_id}.{item.dataset_id}.{item.table_id}** (matched in {match_info})"
             )
         result.append("")
 
-    # カラムの検索結果
+    # Column search results
     if columns:
-        result.append("### カラム\n")
+        result.append("### Columns\n")
         for item in columns:
-            match_info = "名前" if item.match_location == "name" else "説明"
+            match_info = "name" if item.match_location == "name" else "description"
             result.append(
-                f"- **{item.project_id}.{item.dataset_id}.{item.table_id}.{item.column_name}** ({match_info}に一致)"
+                f"- **{item.project_id}.{item.dataset_id}.{item.table_id}.{item.column_name}** (matched in {match_info})"
             )
         result.append("")
 
@@ -178,10 +178,10 @@ def convert_search_results_to_markdown(
 def convert_query_result_to_markdown(
     result: QueryExecutionResult, project_id: str = None
 ) -> str:
-    """クエリ実行結果をマークダウン形式に変換する"""
+    """Convert query execution result to markdown format"""
 
     def format_bytes(bytes_count: int) -> str:
-        """バイト数を人間が読みやすい形式にフォーマットする"""
+        """Format byte count to human-readable format"""
         for unit in ["B", "KB", "MB", "GB", "TB"]:
             if bytes_count < 1024.0:
                 return f"{bytes_count:.1f} {unit}"
@@ -189,27 +189,27 @@ def convert_query_result_to_markdown(
         return f"{bytes_count:.1f} PB"
 
     if result.success:
-        # 成功時の結果をフォーマット
+        # Format results on success
         scan_size = format_bytes(result.total_bytes_processed or 0)
         bill_size = format_bytes(result.total_bytes_billed or 0)
 
-        # クエリ結果のテーブルを作成
+        # Create query result table
         table_content = ""
         if result.rows and len(result.rows) > 0:
-            # 最初の行からカラム名を取得
+            # Get column names from first row
             columns = list(result.rows[0].keys())
 
-            # テーブルヘッダーを作成
-            table_content = "## クエリ結果\n\n"
+            # Create table header
+            table_content = "## Query Results\n\n"
             table_content += "| " + " | ".join(columns) + " |\n"
             table_content += "| " + " | ".join(["---"] * len(columns)) + " |\n"
 
-            # 行を追加（可読性のため最初の20行に制限）
+            # Add rows (limited to first 20 rows for readability)
             for row in result.rows[:20]:
                 values = []
                 for col in columns:
                     value = row.get(col, "")
-                    # 文字列に変換し、長すぎる場合は切り詰める
+                    # Convert to string and truncate if too long
                     str_value = str(value) if value is not None else ""
                     if len(str_value) > 50:
                         str_value = str_value[:47] + "..."
@@ -217,42 +217,42 @@ def convert_query_result_to_markdown(
                 table_content += "| " + " | ".join(values) + " |\n"
 
             if len(result.rows) > 20:
-                table_content += f"\n*... さらに {len(result.rows) - 20} 行*\n"
+                table_content += f"\n*... {len(result.rows) - 20} more rows*\n"
 
-        markdown_content = f"""# BigQuery クエリ実行結果
+        markdown_content = f"""# BigQuery Query Execution Result
 
-## クエリ情報
-- **ステータス**: ✅ 成功
-- **プロジェクトID**: {project_id or "デフォルト"}
-- **ジョブID**: {result.job_id or "N/A"}
-- **実行時間**: {result.execution_time_ms or 0} ms
+## Query Information
+- **Status**: ✅ Success
+- **Project ID**: {project_id or "Default"}
+- **Job ID**: {result.job_id or "N/A"}
+- **Execution Time**: {result.execution_time_ms or 0} ms
 
-## リソース使用量
-- **処理バイト数**: {scan_size} ({result.total_bytes_processed or 0:,} bytes)
-- **課金バイト数**: {bill_size} ({result.total_bytes_billed or 0:,} bytes)
-- **返された行数**: {result.total_rows or 0:,}
+## Resource Usage
+- **Bytes Processed**: {scan_size} ({result.total_bytes_processed or 0:,} bytes)
+- **Bytes Billed**: {bill_size} ({result.total_bytes_billed or 0:,} bytes)
+- **Rows Returned**: {result.total_rows or 0:,}
 
 {table_content}
 """
     else:
-        # エラー時の結果をフォーマット
-        markdown_content = f"""# BigQuery クエリ実行結果
+        # Format results on error
+        markdown_content = f"""# BigQuery Query Execution Result
 
-## クエリ情報
-- **ステータス**: ❌ 失敗
-- **プロジェクトID**: {project_id or "デフォルト"}
-- **実行時間**: {result.execution_time_ms or 0} ms
+## Query Information
+- **Status**: ❌ Failed
+- **Project ID**: {project_id or "Default"}
+- **Execution Time**: {result.execution_time_ms or 0} ms
 
-## エラー詳細
+## Error Details
 ```
-{result.error_message or "不明なエラー"}
+{result.error_message or "Unknown error"}
 ```
 
-## 推奨事項
-- SQLの構文を確認してください
-- テーブル名とカラム名が存在することを確認してください
-- 適切な権限があることを確認してください
-- まず小さなデータセットでテストしてください
+## Recommendations
+- Check SQL syntax
+- Verify that table and column names exist
+- Ensure you have proper permissions
+- Test with a smaller dataset first
 """
 
     return markdown_content
@@ -261,10 +261,10 @@ def convert_query_result_to_markdown(
 def convert_dry_run_result_to_markdown(
     result: QueryDryRunResult, project_id: str = None
 ) -> str:
-    """ドライラン結果をマークダウン形式に変換する"""
+    """Convert dry run result to markdown format"""
 
     def format_bytes(bytes_count: int) -> str:
-        """バイト数を人間が読みやすい形式にフォーマットする"""
+        """Format byte count to human-readable format"""
         for unit in ["B", "KB", "MB", "GB", "TB"]:
             if bytes_count < 1024.0:
                 return f"{bytes_count:.1f} {unit}"
@@ -275,39 +275,39 @@ def convert_dry_run_result_to_markdown(
     bill_size = format_bytes(result.total_bytes_billed or 0)
 
     status_icon = "✅" if result.is_safe else "⚠️"
-    status_text = "安全" if result.is_safe else "注意が必要"
+    status_text = "Safe" if result.is_safe else "Caution Required"
 
-    markdown_content = f"""# BigQuery クエリ スキャン量チェック結果
+    markdown_content = f"""# BigQuery Query Scan Amount Check Result
 
-## チェック情報
-- **ステータス**: {status_icon} {status_text}
-- **プロジェクトID**: {project_id or "デフォルト"}
+## Check Information
+- **Status**: {status_icon} {status_text}
+- **Project ID**: {project_id or "Default"}
 
-## 予想リソース使用量
-- **処理予定バイト数**: {scan_size} ({result.total_bytes_processed or 0:,} bytes)
-- **課金予定バイト数**: {bill_size} ({result.total_bytes_billed or 0:,} bytes)
+## Expected Resource Usage
+- **Bytes to be Processed**: {scan_size} ({result.total_bytes_processed or 0:,} bytes)
+- **Bytes to be Billed**: {bill_size} ({result.total_bytes_billed or 0:,} bytes)
 
-## 安全性評価
+## Safety Assessment
 """
 
     if result.is_safe:
-        markdown_content += """✅ **このクエリは安全に実行できます**
-- スキャン量が設定された制限値以下です
-- そのまま実行しても問題ありません
+        markdown_content += """✅ **This query can be executed safely**
+- Scan amount is below the configured limit
+- It can be executed without issues
 
-## 推奨事項
-- 必要に応じて `execute_query` ツールで実行してください
+## Recommendations
+- Execute using the `execute_query` tool if needed
 """
     else:
-        markdown_content += """⚠️ **このクエリは大量のデータをスキャンします**
-- スキャン量が設定された制限値を超えています
-- 実行前に以下の点を検討してください
+        markdown_content += """⚠️ **This query will scan a large amount of data**
+- Scan amount exceeds the configured limit
+- Consider the following points before execution
 
-## 推奨事項
-- WHERE句を追加してデータ量を絞り込む
-- パーティション化されたテーブルの場合、日付範囲を指定する
-- SELECT句で必要なカラムのみを指定する
-- LIMIT句を追加して結果行数を制限する
+## Recommendations
+- Add WHERE clause to filter data
+- For partitioned tables, specify date range
+- Specify only necessary columns in SELECT clause
+- Add LIMIT clause to restrict result rows
 """
 
     return markdown_content

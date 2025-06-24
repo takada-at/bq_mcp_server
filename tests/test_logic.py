@@ -64,8 +64,8 @@ async def test_get_current_cache_loaded_after_none(mock_cache_manager, mock_get_
     mock_cache_manager.is_cache_valid.assert_not_called()
     mock_cache_manager.update_cache.assert_called_once()
     mock_logger.info.assert_any_call(
-        "キャッシュが無効または存在しないため、更新を試みます..."
-    )  # Updated to Japanese
+        "Cache is invalid or doesn't exist, attempting to update..."
+    )
     # Removed: mock_logger.warning.assert_any_call("Cache file not found. Triggering update.") (not logged by logic.py)
     # Removed: mock_logger.info.assert_any_call(f"Cache updated successfully: {updated_cache}") (no such log in logic.py for this path)
 
@@ -101,8 +101,8 @@ async def test_get_current_cache_loaded_after_invalid(
     mock_cache_manager.is_cache_valid.assert_called_once_with(initial_cache)
     mock_cache_manager.update_cache.assert_called_once()
     mock_logger.info.assert_any_call(
-        "キャッシュが無効または存在しないため、更新を試みます..."
-    )  # Updated to Japanese
+        "Cache is invalid or doesn't exist, attempting to update..."
+    )
     # Removed: mock_logger.warning.assert_any_call(f"Cache is invalid or expired: {initial_cache}. Triggering update.") (not logged by logic.py)
     # Removed: mock_logger.info.assert_any_call(f"Cache updated successfully: {updated_cache}") (no such log in logic.py for this path)
 
@@ -127,18 +127,15 @@ async def test_get_current_cache_update_fails(mock_cache_manager, mock_get_logge
     # Assertions
     assert exc_info.value.status_code == 503
     assert (
-        exc_info.value.detail
-        == "キャッシュデータの取得に失敗しました。サーバーが利用できません。"
-    )  # Updated to Japanese
+        exc_info.value.detail == "Failed to retrieve cache data. Server is unavailable."
+    )
     mock_cache_manager.load_cache.assert_called_once()
     mock_cache_manager.update_cache.assert_called_once()
     mock_logger.info.assert_any_call(
-        "キャッシュが無効または存在しないため、更新を試みます..."
-    )  # Updated to Japanese
+        "Cache is invalid or doesn't exist, attempting to update..."
+    )
     # Removed: mock_logger.warning.assert_any_call("Cache file not found. Triggering update.") (not logged by logic.py)
-    mock_logger.error.assert_any_call(
-        "キャッシュの更新に失敗しました。"
-    )  # Updated to Japanese
+    mock_logger.error.assert_any_call("Failed to update cache.")
 
 
 @pytest.mark.asyncio
@@ -243,13 +240,13 @@ async def test_get_datasets_generic_exception_triggers_http_exception(
     assert exc_info.value.status_code == 503
     assert (
         exc_info.value.detail
-        == "データセット一覧の取得に失敗しました。サーバーが利用できません。"
-    )  # Updated to Japanese
+        == "Failed to retrieve dataset list. Server is unavailable."
+    )
     mock_get_current_cache.assert_called_once()
     # Check for the two separate error log calls
     mock_logger.error.assert_any_call(
-        f"データセット一覧の取得中にエラーが発生: {original_exception}"
-    )  # Updated to Japanese
+        f"Error occurred while retrieving dataset list: {original_exception}"
+    )
     mock_logger.error.assert_any_call(traceback.format_exception(original_exception))
 
 
@@ -312,10 +309,7 @@ async def test_get_datasets_by_project_project_not_found(
 
     # Assertions
     assert exc_info.value.status_code == 404
-    assert (
-        exc_info.value.detail
-        == f"プロジェクト '{project_id_to_test}' は見つかりません。"
-    )  # Updated to Japanese
+    assert exc_info.value.detail == f"Project '{project_id_to_test}' not found."
     mock_get_current_cache.assert_called_once()
     # Removed: mock_logger.warning.assert_any_call(f"Project ID not found: {project_id_to_test}") (log not in logic.py)
 
@@ -413,10 +407,7 @@ async def test_get_tables_project_id_provided_dataset_not_found(
 
     # Assertions
     assert exc_info.value.status_code == 404
-    assert (
-        exc_info.value.detail
-        == f"データセット '{project_id}.{dataset_id}' は見つかりません。"
-    )  # Updated to Japanese
+    assert exc_info.value.detail == f"Dataset '{project_id}.{dataset_id}' not found."
     mock_cache_manager.get_cached_dataset_data.assert_called_once_with(
         project_id, dataset_id
     )  # Corrected argument order
@@ -529,10 +520,7 @@ async def test_get_tables_no_project_id_dataset_not_found(
 
     # Assertions
     assert exc_info.value.status_code == 404
-    assert (
-        exc_info.value.detail
-        == f"データセット '{dataset_id_to_find}' は見つかりません。"
-    )  # Updated to Japanese
+    assert exc_info.value.detail == f"Dataset '{dataset_id_to_find}' not found."
     mock_get_current_cache.assert_called_once()
     mock_config.get_settings.assert_called_once()
     # Check get_cached_dataset_data calls for each project that might contain the dataset_id

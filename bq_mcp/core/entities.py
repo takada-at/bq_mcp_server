@@ -6,191 +6,191 @@ import datetime
 
 
 class LogSetting(BaseModel):
-    """ログ設定を完了したことを示すモデル"""
+    """Model indicating log configuration completion"""
 
-    log_to_console: bool = Field(
-        False, description="コンソールにログを出力するかどうか"
-    )
+    log_to_console: bool = Field(False, description="Whether to output logs to console")
 
 
 class ColumnSchema(BaseModel):
-    """BigQueryテーブルのカラムスキーマを表すモデル"""
+    """Model representing BigQuery table column schema"""
 
-    name: str = Field(..., description="カラム名")
-    type: str = Field(..., description="データ型 (例: STRING, INTEGER, TIMESTAMP)")
-    mode: str = Field(..., description="モード (NULLABLE, REQUIRED, REPEATED)")
-    description: Optional[str] = Field(None, description="カラムの説明")
+    name: str = Field(..., description="Column name")
+    type: str = Field(..., description="Data type (e.g., STRING, INTEGER, TIMESTAMP)")
+    mode: str = Field(..., description="Mode (NULLABLE, REQUIRED, REPEATED)")
+    description: Optional[str] = Field(None, description="Column description")
     fields: Optional[List["ColumnSchema"]] = Field(
-        None, description="RECORD型の場合のネストされたフィールド"
-    )  # 再帰的な定義
+        None, description="Nested fields for RECORD type"
+    )  # Recursive definition
 
 
 class TableSchema(BaseModel):
-    """BigQueryテーブルのスキーマ全体を表すモデル"""
+    """Model representing entire BigQuery table schema"""
 
-    columns: List[ColumnSchema] = Field(..., description="テーブルのカラムリスト")
+    columns: List[ColumnSchema] = Field(..., description="List of table columns")
 
 
 class TableMetadata(BaseModel):
-    """BigQueryテーブルのメタデータを表すモデル"""
+    """Model representing BigQuery table metadata"""
 
-    project_id: str = Field(..., description="プロジェクトID")
-    dataset_id: str = Field(..., description="データセットID")
-    table_id: str = Field(..., description="テーブルID")
-    full_table_id: str = Field(
-        ..., description="完全なテーブルID (project.dataset.table)"
-    )
+    project_id: str = Field(..., description="Project ID")
+    dataset_id: str = Field(..., description="Dataset ID")
+    table_id: str = Field(..., description="Table ID")
+    full_table_id: str = Field(..., description="Full table ID (project.dataset.table)")
     schema_: Optional[TableSchema] = Field(
-        None, description="テーブルスキーマ"
-    )  # 'schema'はBaseModelで予約語のためエイリアスを使用
-    description: Optional[str] = Field(None, description="テーブルの説明")
-    num_rows: Optional[int] = Field(None, description="テーブルの行数")
-    num_bytes: Optional[int] = Field(None, description="テーブルのサイズ (バイト)")
-    created_time: Optional[datetime.datetime] = Field(None, description="作成日時")
+        None, description="Table schema"
+    )  # 'schema' is reserved in BaseModel, so using alias
+    description: Optional[str] = Field(None, description="Table description")
+    num_rows: Optional[int] = Field(None, description="Number of table rows")
+    num_bytes: Optional[int] = Field(None, description="Table size in bytes")
+    created_time: Optional[datetime.datetime] = Field(None, description="Creation time")
     last_modified_time: Optional[datetime.datetime] = Field(
-        None, description="最終更新日時"
+        None, description="Last modified time"
     )
-    # 他に必要なメタデータがあれば追加
+    # Add other necessary metadata if needed
 
 
 class DatasetMetadata(BaseModel):
-    """BigQueryデータセットのメタデータを表すモデル"""
+    """Model representing BigQuery dataset metadata"""
 
-    project_id: str = Field(..., description="プロジェクトID")
-    dataset_id: str = Field(..., description="データセットID")
-    description: Optional[str] = Field(None, description="データセットの説明")
-    location: Optional[str] = Field(None, description="データセットのロケーション")
-    # 他に必要なメタデータがあれば追加
+    project_id: str = Field(..., description="Project ID")
+    dataset_id: str = Field(..., description="Dataset ID")
+    description: Optional[str] = Field(None, description="Dataset description")
+    location: Optional[str] = Field(None, description="Dataset location")
+    # Add other necessary metadata if needed
 
 
-# --- APIレスポンスモデル ---
+# --- API Response Models ---
 
 
 class DatasetListResponse(BaseModel):
-    """/datasets エンドポイントのレスポンスモデル"""
+    """Response model for /datasets endpoint"""
 
-    datasets: List[DatasetMetadata] = Field(
-        ..., description="データセットメタデータのリスト"
-    )
+    datasets: List[DatasetMetadata] = Field(..., description="List of dataset metadata")
 
 
 class TableListResponse(BaseModel):
-    """/<dataset>/tables エンドポイントのレスポンスモデル"""
+    """Response model for /<dataset>/tables endpoint"""
 
     tables: List[TableMetadata] = Field(
-        ..., description="テーブルメタデータのリスト"
-    )  # スキーマは含まない簡易版
+        ..., description="List of table metadata"
+    )  # Simplified version without schema
 
 
 class SearchResultItem(BaseModel):
-    """検索結果のアイテム"""
+    """Search result item"""
 
-    type: str = Field(..., description="アイテムの種類 ('dataset', 'table', 'column')")
+    type: str = Field(..., description="Item type ('dataset', 'table', 'column')")
     project_id: str
     dataset_id: str
-    table_id: Optional[str] = None  # table or columnの場合
-    column_name: Optional[str] = None  # columnの場合
+    table_id: Optional[str] = None  # For table or column
+    column_name: Optional[str] = None  # For column
     match_location: str = Field(
-        ..., description="キーワードがマッチした場所 ('name', 'description')"
+        ..., description="Location where keyword matched ('name', 'description')"
     )
-    # 必要に応じて他の情報（説明など）も追加
+    # Add other information (description, etc.) as needed
 
 
 class SearchResponse(BaseModel):
-    """/search エンドポイントのレスポンスモデル"""
+    """Response model for /search endpoint"""
 
-    query: str = Field(..., description="実行された検索キーワード")
-    results: List[SearchResultItem] = Field(..., description="検索結果リスト")
+    query: str = Field(..., description="Executed search keyword")
+    results: List[SearchResultItem] = Field(..., description="Search result list")
 
 
 class QueryExecutionRequest(BaseModel):
-    """クエリ実行リクエストモデル"""
+    """Query execution request model"""
 
-    sql: str = Field(..., description="実行するSQLクエリ")
-    project_id: Optional[str] = Field(None, description="実行対象のプロジェクトID")
+    sql: str = Field(..., description="SQL query to execute")
+    project_id: Optional[str] = Field(
+        None, description="Target project ID for execution"
+    )
 
 
 class QueryDryRunResult(BaseModel):
-    """ドライラン実行結果モデル"""
+    """Dry run execution result model"""
 
-    total_bytes_processed: int = Field(..., description="処理される予定のバイト数")
-    total_bytes_billed: int = Field(..., description="課金される予定のバイト数")
-    is_safe: bool = Field(..., description="安全に実行できるクエリかどうか")
-    modified_sql: str = Field(..., description="LIMIT句が修正されたSQL")
+    total_bytes_processed: int = Field(
+        ..., description="Expected bytes to be processed"
+    )
+    total_bytes_billed: int = Field(..., description="Expected bytes to be billed")
+    is_safe: bool = Field(..., description="Whether the query can be executed safely")
+    modified_sql: str = Field(..., description="SQL with modified LIMIT clause")
 
 
 class QueryExecutionResult(BaseModel):
-    """クエリ実行結果モデル"""
+    """Query execution result model"""
 
-    success: bool = Field(..., description="クエリが正常に実行されたか")
-    rows: Optional[List[Dict]] = Field(None, description="クエリ結果の行データ")
-    total_rows: Optional[int] = Field(None, description="総行数")
-    total_bytes_processed: Optional[int] = Field(None, description="処理されたバイト数")
-    total_bytes_billed: Optional[int] = Field(None, description="課金されたバイト数")
-    execution_time_ms: Optional[int] = Field(None, description="実行時間（ミリ秒）")
-    error_message: Optional[str] = Field(None, description="エラーメッセージ")
-    job_id: Optional[str] = Field(None, description="BigQueryジョブID")
+    success: bool = Field(..., description="Whether the query executed successfully")
+    rows: Optional[List[Dict]] = Field(None, description="Query result row data")
+    total_rows: Optional[int] = Field(None, description="Total number of rows")
+    total_bytes_processed: Optional[int] = Field(None, description="Bytes processed")
+    total_bytes_billed: Optional[int] = Field(None, description="Bytes billed")
+    execution_time_ms: Optional[int] = Field(
+        None, description="Execution time in milliseconds"
+    )
+    error_message: Optional[str] = Field(None, description="Error message")
+    job_id: Optional[str] = Field(None, description="BigQuery job ID")
 
 
-# --- キャッシュ用データ構造 ---
+# --- Cache Data Structures ---
 class CachedData(BaseModel):
-    """キャッシュに保存するデータ全体のモデル"""
+    """Model for entire data stored in cache"""
 
     datasets: Dict[str, List[DatasetMetadata]] = Field(
-        default_factory=dict, description="プロジェクトIDごとのデータセットリスト"
+        default_factory=dict, description="Dataset list by project ID"
     )  # key: project_id
     tables: Dict[str, Dict[str, List[TableMetadata]]] = Field(
         default_factory=dict,
-        description="プロジェクト・データセットごとのテーブルリスト（スキーマ含む）",
+        description="Table list by project and dataset (including schema)",
     )  # key1: project_id, key2: dataset_id
     last_updated: Optional[datetime.datetime] = Field(
-        None, description="キャッシュの最終更新日時"
+        None, description="Cache last updated time"
     )
 
 
 class Settings(BaseModel):
-    """アプリケーション設定を管理するクラス"""
+    """Class for managing application settings"""
 
-    # GCP関連設定
+    # GCP related settings
     gcp_service_account_key_path: Optional[str] = Field(
-        None, description="GCPサービスアカウントキーのパス（未設定の場合はADCを使用）"
+        None, description="GCP service account key path (uses ADC if not set)"
     )
     project_ids: List[str] = Field(
         ...,
-        description="GCPプロジェクトIDのリスト",
+        description="List of GCP project IDs",
     )
     dataset_filters: List[str] = Field(
         default_factory=list,
-        description="データセットフィルターのリスト（例: pj1.*,pj2.dataset1）",
+        description="List of dataset filters (e.g., pj1.*,pj2.dataset1)",
     )
-    # キャッシュ設定
+    # Cache settings
     cache_ttl_seconds: int = Field(
         3600,
-        description="キャッシュの有効期限（秒）",
+        description="Cache TTL in seconds",
     )
     cache_file_base_dir: str = Field(
-        ".bq_metadata_cache", description="キャッシュファイルの保存先ディレクトリ"
+        ".bq_metadata_cache", description="Cache file storage directory"
     )
 
-    # APIサーバー設定 (uvicorn用)
-    api_host: str = Field("127.0.0.1", description="APIサーバーのホスト名")
-    api_port: int = Field(8000, description="APIサーバーのポート番号")
+    # API server settings (for uvicorn)
+    api_host: str = Field("127.0.0.1", description="API server hostname")
+    api_port: int = Field(8000, description="API server port number")
 
-    # クエリ実行設定
+    # Query execution settings
     max_scan_bytes: int = Field(
         1024 * 1024 * 1024,  # 1GB
-        description="クエリの最大スキャンバイト数",
+        description="Maximum scan bytes for queries",
     )
-    default_query_limit: int = Field(100, description="デフォルトのクエリ結果制限数")
+    default_query_limit: int = Field(100, description="Default query result limit")
     query_timeout_seconds: int = Field(
         300,  # 5 minutes
-        description="クエリのタイムアウト秒数",
+        description="Query timeout in seconds",
     )
 
 
 @dataclass
 class ApplicationContext:
-    """アプリケーションのコンテキストを保持するクラス"""
+    """Class for holding application context"""
 
     settings: Settings
     log_setting: LogSetting

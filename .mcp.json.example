@@ -1,11 +1,11 @@
 {
   "mcpServers": {
-    "bigquery_ai": {
+    "bq_mcp": {
       "command": "uv",
       "args": [
         "run",
-        "mcp_server"
-      ]
+        "mcp_server",
+      ],
       "env": {
         "PYTHONPATH": "directory"
       }

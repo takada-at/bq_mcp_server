@@ -2,8 +2,9 @@
 """
 Generate .env.example from Settings class
 
-このスクリプトは core.entities.Settings クラスのフィールド定義から
-環境変数を抽出し、.env.example ファイルを自動生成します。
+This script extracts environment variables from the field definitions
+of the core.entities.Settings class and automatically generates
+a .env.example file.
 """
 
 from pathlib import Path
@@ -14,29 +15,29 @@ from pydantic.fields import FieldInfo
 
 
 def extract_env_variables_from_settings() -> List[Tuple[str, Any, str]]:
-    """Settings クラスから環境変数を抽出"""
+    """Extract environment variables from Settings class"""
     env_vars = []
 
-    # Settingsクラスのモデル情報を取得
+    # Get model information of Settings class
     model_fields = Settings.model_fields
 
     for field_name, field_info in model_fields.items():
-        # 環境変数名を生成（snake_case -> UPPER_CASE）
+        # Generate environment variable name (snake_case -> UPPER_CASE)
         env_name = field_name.upper()
 
-        # デフォルト値を取得
+        # Get default value
         default_value = None
         if hasattr(field_info, "default") and field_info.default is not ...:
-            # PydanticUndefinedを適切に処理
+            # Handle PydanticUndefined appropriately
             if str(field_info.default) != "PydanticUndefined":
                 default_value = field_info.default
 
-        # フィールドの型情報を取得
+        # Get field type information
         field_type = (
             field_info.annotation if hasattr(field_info, "annotation") else None
         )
 
-        # コメントを生成
+        # Generate comment
         comment = generate_comment_for_field(
             field_name, default_value, field_type, field_info
         )
@@ -49,13 +50,13 @@ def extract_env_variables_from_settings() -> List[Tuple[str, Any, str]]:
 def generate_comment_for_field(
     field_name: str, default_value: Any, field_type: Any, field_info: FieldInfo
 ) -> str:
-    """フィールド情報からコメントを生成"""
+    """Generate comment from field information"""
 
-    # フィールドの説明を取得
+    # Get field description
     description = getattr(field_info, "description", "") if field_info else ""
 
-    # 型情報から必須/オプションを判定
-    # フィールドがOptional[T]型かどうかをチェック
+    # Determine required/optional from type information
+    # Check if field is Optional[T] type
     import typing
 
     is_optional = (
@@ -67,7 +68,7 @@ def generate_comment_for_field(
     )
     required_or_optional = "Optional" if is_optional else "Required"
 
-    # 自動生成コメント
+    # Auto-generated comment
     comment_parts = [f"{required_or_optional}:"]
 
     if description:
@@ -82,9 +83,9 @@ def generate_comment_for_field(
 
 
 def generate_env_example(env_vars: List[Tuple[str, Any, str]], output_path: Path):
-    """環境変数から .env.example を生成"""
+    """Generate .env.example from environment variables"""
 
-    # カテゴリ別にグループ化
+    # Group by category
     categories = {
         "GCP Settings": [
             "GCP_SERVICE_ACCOUNT_KEY_PATH",
@@ -100,7 +101,7 @@ def generate_env_example(env_vars: List[Tuple[str, Any, str]], output_path: Path
         ],
     }
 
-    # 環境変数を辞書に変換
+    # Convert environment variables to dictionary
     env_dict = {name: (default, comment) for name, default, comment in env_vars}
 
     lines = []
@@ -114,7 +115,7 @@ def generate_env_example(env_vars: List[Tuple[str, Any, str]], output_path: Path
             if var_name in env_dict:
                 default_value, comment = env_dict[var_name]
 
-                # コメントを追加
+                # Add comment
                 for comment_line in comment.split("\n"):
                     lines.append(
                         f"# {comment_line}"
@@ -122,7 +123,7 @@ def generate_env_example(env_vars: List[Tuple[str, Any, str]], output_path: Path
                         else comment_line
                     )
 
-                # 環境変数の設定
+                # Environment variable setting
                 if (
                     default_value is None
                     or default_value == ""
@@ -136,27 +137,27 @@ def generate_env_example(env_vars: List[Tuple[str, Any, str]], output_path: Path
 
                 lines.append("")
 
-    # ファイルに書き込み
+    # Write to file
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
 
 def main():
-    """メイン関数"""
-    # プロジェクトルートを取得
+    """Main function"""
+    # Get project root
     project_root = Path(__file__).parent.parent
 
     env_example_file = project_root / ".env.example"
 
     try:
-        # Settings クラスから環境変数を抽出
+        # Extract environment variables from Settings class
         env_vars = extract_env_variables_from_settings()
 
         if not env_vars:
             print("Warning: No environment variables found in Settings class")
             return 1
 
-        # .env.example を生成
+        # Generate .env.example
         generate_env_example(env_vars, env_example_file)
 
         print(f"Successfully generated {env_example_file}")

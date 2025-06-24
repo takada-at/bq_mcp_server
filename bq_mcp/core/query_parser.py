@@ -7,9 +7,9 @@ from typing import Tuple, Optional
 
 
 class QueryParser:
-    """SQLクエリの解析とLIMIT句の操作を行うクラス"""
+    """Class for SQL query parsing and LIMIT clause operations"""
 
-    # 危険なクエリパターン
+    # Dangerous query patterns
     DANGEROUS_PATTERNS = [
         r"\bDELETE\b",
         r"\bDROP\b",
@@ -20,52 +20,52 @@ class QueryParser:
         r"\bCREATE\b",
     ]
 
-    # LIMIT句のパターン（大文字小文字を無視）
+    # LIMIT clause pattern (case-insensitive)
     LIMIT_PATTERN = re.compile(r"\bLIMIT\s+(\d+)\b", re.IGNORECASE)
 
     @classmethod
     def is_safe_query(cls, sql: str) -> Tuple[bool, Optional[str]]:
         """
-        クエリが安全かどうかをチェックする
+        Check if the query is safe
 
         Args:
-            sql: チェックするSQLクエリ
+            sql: SQL query to check
 
         Returns:
-            (is_safe, error_message): 安全かどうかとエラーメッセージ
+            (is_safe, error_message): Whether it's safe and error message
         """
         sql_upper = sql.upper()
 
         for pattern in cls.DANGEROUS_PATTERNS:
             if re.search(pattern, sql_upper):
                 clean_pattern = pattern.replace("\\b", "").replace("\\", "")
-                return False, f"危険なSQL操作が検出されました: {clean_pattern}"
+                return False, f"Dangerous SQL operation detected: {clean_pattern}"
 
         return True, None
 
     @classmethod
     def has_limit_clause(cls, sql: str) -> bool:
         """
-        SQLクエリにLIMIT句があるかどうかをチェックする
+        Check if the SQL query has a LIMIT clause
 
         Args:
-            sql: チェックするSQLクエリ
+            sql: SQL query to check
 
         Returns:
-            LIMIT句があるかどうか
+            Whether there is a LIMIT clause
         """
         return bool(cls.LIMIT_PATTERN.search(sql))
 
     @classmethod
     def get_limit_value(cls, sql: str) -> Optional[int]:
         """
-        SQLクエリからLIMIT値を取得する
+        Get the LIMIT value from the SQL query
 
         Args:
-            sql: チェックするSQLクエリ
+            sql: SQL query to check
 
         Returns:
-            LIMIT値（見つからない場合はNone）
+            LIMIT value (None if not found)
         """
         match = cls.LIMIT_PATTERN.search(sql)
         if match:
@@ -75,22 +75,22 @@ class QueryParser:
     @classmethod
     def add_or_modify_limit(cls, sql: str, limit_value: int) -> str:
         """
-        SQLクエリにLIMIT句を追加または修正する
+        Add or modify LIMIT clause in SQL query
 
         Args:
-            sql: 修正するSQLクエリ
-            limit_value: 設定するLIMIT値
+            sql: SQL query to modify
+            limit_value: LIMIT value to set
 
         Returns:
-            LIMIT句が追加または修正されたSQLクエリ
+            SQL query with LIMIT clause added or modified
         """
-        # 既存のLIMIT句があるかチェック
+        # Check if there is an existing LIMIT clause
         if cls.has_limit_clause(sql):
-            # 既存のLIMIT句を新しい値に置き換え
+            # Replace existing LIMIT clause with new value
             return cls.LIMIT_PATTERN.sub(f"LIMIT {limit_value}", sql)
         else:
-            # LIMIT句がない場合は末尾に追加
-            # セミコロンがある場合はその前に、ない場合は末尾に追加
+            # Add LIMIT clause at the end if there is no LIMIT clause
+            # Add before semicolon if present, otherwise at the end
             sql = sql.strip()
             if sql.endswith(";"):
                 return sql[:-1] + f" LIMIT {limit_value};"
@@ -100,18 +100,18 @@ class QueryParser:
     @classmethod
     def normalize_query(cls, sql: str) -> str:
         """
-        SQLクエリを正規化する（前後の空白を削除、改行を整理）
+        Normalize SQL query (remove leading/trailing whitespace, organize line breaks)
 
         Args:
-            sql: 正規化するSQLクエリ
+            sql: SQL query to normalize
 
         Returns:
-            正規化されたSQLクエリ
+            Normalized SQL query
         """
-        # 前後の空白を削除
+        # Remove leading and trailing whitespace
         sql = sql.strip()
 
-        # 複数の連続する空白を1つにまとめる
+        # Combine multiple consecutive spaces into one
         sql = re.sub(r"\s+", " ", sql)
 
         return sql
