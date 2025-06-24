@@ -5,7 +5,7 @@
       "args": [
         "run",
         "mcp_server"
-      ],
+      ]
       "env": {
         "PYTHONPATH": "directory"
       }
