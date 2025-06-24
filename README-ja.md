@@ -46,9 +46,6 @@ uv sync
 ### 環境変数の設定
 
 ```bash
-# 環境変数ファイルを生成
-python scripts/generate_env_example.py
-
 # .env.exampleを.envにコピーして編集
 cp .env.example .env
 ```

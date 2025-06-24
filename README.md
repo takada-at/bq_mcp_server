@@ -46,9 +46,6 @@ uv sync
 ### Configuring Environment Variables
 
 ```bash
-# Generate environment variable file
-python scripts/generate_env_example.py
-
 # Copy and edit .env.example to create .env
 cp .env.example .env
 ```
