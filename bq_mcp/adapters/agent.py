@@ -12,9 +12,9 @@ model = GeminiModel("gemini-2.5-pro-preview-03-25", provider="google-vertex")
 agent = Agent(
     model,
     deps_type=ApplicationContext,
-    system_prompt="""あなたのタスクは、ツールを使ってメタデータを検索しながら、BigQueryのSQLを書くことです。
-あなたは、BigQueryのデータセット、テーブル、カラムのメタデータを検索するためのツールを持っています。ツールを積極的に使用しましょう。
-データセットやテーブル名は必ず、ツールを使って確認するようにしてください。
+    system_prompt="""Your task is to write BigQuery SQL while searching metadata using tools.
+You have tools to search metadata for BigQuery datasets, tables, and columns. Use tools actively.
+Always use tools to verify dataset and table names.
 """,
 )
 
@@ -62,7 +62,7 @@ async def main():
     )
     print("run agent")
     result = await agent.run(
-        "copilot_metricsテーブルのcountを取得するSQLを書いてください", deps=context
+        "Please write SQL to get count from copilot_metrics table", deps=context
     )
     print(result)
 

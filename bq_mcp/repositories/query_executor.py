@@ -138,9 +138,9 @@ class QueryExecutor:
                     return QueryExecutionResult(
                         success=False,
                         error_message=(
-                            f"クエリのスキャン量が制限を超えています。"
-                            f"予想スキャン量: {dry_run_result.total_bytes_processed:,} bytes, "
-                            f"制限: {self.settings.max_scan_bytes:,} bytes"
+                            f"Query scan amount exceeds limit."
+                            f"Expected scan amount: {dry_run_result.total_bytes_processed:,} bytes, "
+                            f"Limit: {self.settings.max_scan_bytes:,} bytes"
                         ),
                     )
 

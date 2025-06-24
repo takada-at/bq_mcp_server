@@ -97,7 +97,7 @@ with gr.Blocks() as demo:
     <div>
         <h1 style="margin: 0 0 1rem 0">BigQuery Assistant</h1>
         <h3 style="margin: 0 0 0.5rem 0">
-            SQL作成を助けるアシスタント
+            Assistant to help create SQL
         </h3>
     </div>
 </div>
@@ -109,14 +109,14 @@ with gr.Blocks() as demo:
         type="messages",
         avatar_images=(None, "https://ai.pydantic.dev/img/logo-white.svg"),
         examples=[
-            {"text": "データセット一覧を表示してください"},
+            {"text": "Please show dataset list"},
         ],
     )
     with gr.Row():
         prompt = gr.Textbox(
             lines=1,
             show_label=False,
-            placeholder="データセット一覧を表示してください",
+            placeholder="Please show dataset list",
         )
     generation = prompt.submit(
         stream_from_agent,

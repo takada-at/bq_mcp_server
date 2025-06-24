@@ -81,7 +81,7 @@ class TestQueryExecutor:
             query_executor._validate_and_prepare_query(sql)
 
         assert exc_info.value.status_code == 400
-        assert "危険なSQL操作" in exc_info.value.detail
+        assert "Dangerous SQL operation" in exc_info.value.detail
 
     def test_validate_and_prepare_query_adds_limit(self, query_executor):
         """Test that query preparation adds LIMIT clause"""
@@ -144,7 +144,7 @@ class TestQueryExecutor:
 
             assert isinstance(result, QueryExecutionResult)
             assert result.success is False
-            assert "スキャン量が制限を超えています" in result.error_message
+            assert "scan amount exceeds limit" in result.error_message
 
     @pytest.mark.asyncio
     async def test_execute_query_force_execution(self, query_executor):

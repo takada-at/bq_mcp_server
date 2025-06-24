@@ -17,12 +17,12 @@ from bq_mcp.repositories import log
 
 def get_bigquery_client() -> Optional[Dataset]:
     """
-    Asynchronous BigQueryクライアントを初期化して返します。
-    サービスアカウントキーが設定されていればそれを使用し、
-    設定されていなければApplication Default Credentials (ADC) を試みます。
+    Initialize and return an asynchronous BigQuery client.
+    Use service account key if configured,
+    otherwise try Application Default Credentials (ADC).
 
     Returns:
-        Optional[BigQuery]: 初期化されたBigQueryクライアントとセッション。初期化に失敗した場合はNone。
+        Optional[BigQuery]: Initialized BigQuery client and session. None if initialization fails.
     """
     logger = log.get_logger()
     settings = config.get_settings()
@@ -32,35 +32,35 @@ def get_bigquery_client() -> Optional[Dataset]:
         project_to_use = settings.project_ids[0] if settings.project_ids else None
         if settings.gcp_service_account_key_path:
             logger.info(
-                f"サービスアカウントキーを使用して認証します: {settings.gcp_service_account_key_path}"
+                f"Authenticating using service account key: {settings.gcp_service_account_key_path}"
             )
             token = Token(settings.gcp_service_account_key_path)
             dataset = Dataset(project=project_to_use, session=session, token=token)
         else:
-            logger.info("Application Default Credentials (ADC) を使用して認証します。")
+            logger.info("Authenticating using Application Default Credentials (ADC).")
             token = Token()
             dataset = Dataset(project=project_to_use, session=session, token=token)
         logger.info(
-            f"Async BigQueryクライアントの初期化準備ができました。デフォルトプロジェクト: {project_to_use}"
+            f"Async BigQuery client initialization ready. Default project: {project_to_use}"
         )
         return dataset
     except FileNotFoundError:
         logger.error(
-            f"サービスアカウントキーファイルが見つかりません: {settings.gcp_service_account_key_path}"
+            f"Service account key file not found: {settings.gcp_service_account_key_path}"
         )
         return None
     except DefaultCredentialsError as e:
         logger.exception(e)
         logger.error(
-            "Application Default Credentials (ADC) が見つかりません。gcloud auth application-default login を実行するか、サービスアカウントキーを設定してください。"
+            "Application Default Credentials (ADC) not found. Please run gcloud auth application-default login or configure service account key."
         )
         return None
     except RefreshError as e:  # Might still be relevant for ADC
-        logger.error(f"認証情報の更新に失敗しました: {e}")
+        logger.error(f"Failed to refresh credentials: {e}")
         return None
     except Exception as e:
         logger.error(
-            f"Async BigQueryクライアントの初期化中に予期せぬエラーが発生しました: {e}"
+            f"Unexpected error occurred during async BigQuery client initialization: {e}"
         )
         return None
 
@@ -69,19 +69,19 @@ async def _paginate_bigquery_api(
     api_call: Callable[[Dict[str, Any]], Awaitable[Dict[str, Any]]],
     items_key: str,
     next_page_token_key: str = "nextPageToken",
-    operation_name: str = "API呼び出し",
+    operation_name: str = "API call",
 ) -> List[Dict[str, Any]]:
     """
-    BigQuery APIのページネーション処理を共通化する関数。
+    Common function for BigQuery API pagination processing.
 
     Args:
-        api_call: APIを呼び出す関数（paramsを受け取り、レスポンスを返す）
-        items_key: レスポンス内のアイテム配列のキー名
-        next_page_token_key: 次ページトークンのキー名
-        operation_name: ログ用の操作名
+        api_call: Function to call API (receives params and returns response)
+        items_key: Key name of item array in response
+        next_page_token_key: Key name of next page token
+        operation_name: Operation name for logging
 
     Returns:
-        全ページのアイテムのリスト
+        List of items from all pages
     """
     logger = log.get_logger()
     all_items = []
@@ -94,7 +94,7 @@ async def _paginate_bigquery_api(
         if page_token:
             params["pageToken"] = page_token
 
-        logger.debug(f"{operation_name} (ページ {page_count})")
+        logger.debug(f"{operation_name} (page {page_count})")
 
         response = await api_call(params)
         items = response.get(items_key, [])
@@ -106,7 +106,7 @@ async def _paginate_bigquery_api(
             break
 
     logger.info(
-        f"{operation_name}完了: {len(all_items)} 個のアイテムを {page_count} ページで取得"
+        f"{operation_name} completed: retrieved {len(all_items)} items in {page_count} pages"
     )
     return all_items
 
@@ -114,7 +114,7 @@ async def _paginate_bigquery_api(
 async def get_dataset_detail(
     client: Dataset, project_id: str, dataset_id: str
 ) -> Optional[DatasetMetadata]:
-    """指定されたプロジェクトとデータセットIDの詳細を非同期で取得します。"""
+    """Asynchronously retrieve details of specified project and dataset ID."""
     logger = log.get_logger()
     try:
         dataset = Dataset(
@@ -125,7 +125,7 @@ async def get_dataset_detail(
         )
         dataset_details = await dataset.get(session=client.session)
         if not dataset_details:
-            logger.warning(f"データセット {project_id}.{dataset_id} が見つかりません。")
+            logger.warning(f"Dataset {project_id}.{dataset_id} not found.")
             return None
 
         ds_ref = dataset_details.get("datasetReference", {})
@@ -133,9 +133,7 @@ async def get_dataset_detail(
         actual_dataset_id = ds_ref.get("datasetId")
 
         if not actual_dataset_id:
-            logger.warning(
-                f"データセットIDが見つからないためスキップします: {dataset_details}"
-            )
+            logger.warning(f"Skipping because dataset ID not found: {dataset_details}")
             return None
 
         description = dataset_details.get("description")
@@ -147,16 +145,16 @@ async def get_dataset_detail(
         )
         return metadata
     except Exception as e:
-        logger.error(f"データセットの取得中にエラーが発生しました: {e}")
+        logger.error(f"Error occurred while retrieving dataset: {e}")
         return None
 
 
 async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetadata]:
-    """指定されたプロジェクトのデータセット一覧を非同期で取得します。ページネーション対応。"""
+    """Asynchronously retrieve list of datasets for specified project. Supports pagination."""
     logger = log.get_logger()
 
     async def list_datasets_api(params: Dict[str, Any]) -> Dict[str, Any]:
-        """データセット一覧APIを呼び出す内部関数"""
+        """Internal function to call dataset list API"""
         return await Dataset(
             project=project_id, session=client.session.session, token=client.token
         ).list_datasets(params=params)
@@ -166,7 +164,7 @@ async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetada
         api_call=list_datasets_api,
         items_key="datasets",
         next_page_token_key="nextPageToken",
-        operation_name=f"データセット一覧取得 (プロジェクト: {project_id})",
+        operation_name=f"Dataset list retrieval (project: {project_id})",
     )
 
     datasets_metadata = []
@@ -181,9 +179,7 @@ async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetada
         actual_dataset_id = ds_ref.get("datasetId")
 
         if not actual_dataset_id:
-            logger.warning(
-                f"データセットIDが見つからないためスキップします: {dataset_data}"
-            )
+            logger.warning(f"Skipping because dataset ID not found: {dataset_data}")
             continue
 
         description = dataset_data.get("description")
@@ -213,7 +209,7 @@ async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetada
 
 
 def _parse_schema(schema_fields: List[dict]) -> List[ColumnSchema]:  # Changed type hint
-    """BigQueryのスキーマフィールドリスト(dict形式)をColumnSchemaのリストに変換します。"""
+    """Convert BigQuery schema field list (dict format) to list of ColumnSchema."""
     columns = []
     for field_data in schema_fields:  # field_data is a dict
         nested_fields = None
@@ -241,7 +237,7 @@ def _parse_schema(schema_fields: List[dict]) -> List[ColumnSchema]:  # Changed t
 async def fetch_tables_and_schemas(
     client: Dataset, project_id: str, dataset_id: str
 ) -> List[TableMetadata]:
-    """指定されたデータセットのテーブル一覧と各テーブルのスキーマを取得します。ページネーション対応。"""
+    """Retrieve table list and schema for each table in specified dataset. Supports pagination."""
     logger = log.get_logger()
     dataset = Dataset(
         dataset_name=dataset_id,
@@ -251,15 +247,15 @@ async def fetch_tables_and_schemas(
     )
 
     async def list_tables_api(params: Dict[str, Any]) -> Dict[str, Any]:
-        """テーブル一覧APIを呼び出す内部関数"""
+        """Internal function to call table list API"""
         return await dataset.list_tables(params=params)
 
-    # ページネーション処理を共通関数で実行（tables.listは'pageToken'を使用）
+    # Execute pagination processing with common function (tables.list uses 'pageToken')
     tables_list = await _paginate_bigquery_api(
         api_call=list_tables_api,
         items_key="tables",
-        next_page_token_key="pageToken",  # tables.listは'pageToken'を使用
-        operation_name=f"テーブル一覧取得 (データセット: {project_id}.{dataset_id})",
+        next_page_token_key="pageToken",  # tables.list uses 'pageToken'
+        operation_name=f"Table list retrieval (dataset: {project_id}.{dataset_id})",
     )
 
     tables_metadata = []
@@ -272,9 +268,7 @@ async def fetch_tables_and_schemas(
         actual_table_id = tbl_ref.get("tableId")
 
         if not actual_table_id:
-            logger.warning(
-                f"テーブルIDが見つからないためスキップします: {table_item_data}"
-            )
+            logger.warning(f"Skipping because table ID not found: {table_item_data}")
             continue
         table = Table(
             dataset_name=actual_dataset_id,
@@ -340,14 +334,12 @@ async def fetch_tables_and_schemas(
 
 
 async def close_client(client: Dataset):
-    """非同期クライアントを閉じます。"""
+    """Close asynchronous client."""
     if client and client.session:
         await client.session.session.close()
         await client.session.close()
         await client.token.close()
-        log.get_logger().info("BigQueryクライアントを正常に閉じました。")
+        log.get_logger().info("BigQuery client closed successfully.")
     else:
-        log.get_logger().warning(
-            "クライアントが初期化されていないか、セッションがありません。"
-        )
+        log.get_logger().warning("Client not initialized or session not available.")
     return None

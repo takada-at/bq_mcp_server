@@ -3,72 +3,74 @@ from bq_mcp.core.entities import TableMetadata, TableSchema, ColumnSchema
 
 
 def test_convert_tables_to_markdown_empty_list():
-    """空のテーブルリストを変換するテスト"""
+    """Test converting empty table list"""
     tables = []
     result = converter.convert_tables_to_markdown(tables)
     assert result == ""
 
 
 def test_convert_tables_to_markdown_single_table_without_schema():
-    """スキーマがないシンプルなテーブルを変換するテスト"""
+    """Test converting simple table without schema"""
     table = TableMetadata(
         project_id="test-project",
         dataset_id="test_dataset",
         table_id="test_table",
         full_table_id="test-project.test_dataset.test_table",
-        description="テスト用テーブル",
+        description="Test table",
     )
     result = converter.convert_tables_to_markdown([table])
     assert "### Table: `test-project.test_dataset.test_table`" in result
-    assert "テスト用テーブル" in result
+    assert "Test table" in result
 
 
 def test_convert_tables_to_markdown_table_with_simple_schema():
-    """シンプルなスキーマを持つテーブルを変換するテスト"""
+    """Test converting table with simple schema"""
     columns = [
         ColumnSchema(name="id", type="INTEGER", mode="REQUIRED", description="ID"),
-        ColumnSchema(name="name", type="STRING", mode="NULLABLE", description="名前"),
+        ColumnSchema(name="name", type="STRING", mode="NULLABLE", description="Name"),
     ]
     table = TableMetadata(
         project_id="test-project",
         dataset_id="test_dataset",
         table_id="test_table",
         full_table_id="test-project.test_dataset.test_table",
-        description="テスト用テーブル",
+        description="Test table",
         schema_=TableSchema(columns=columns),
     )
 
     result = converter.convert_tables_to_markdown([table])
 
-    # 基本情報の確認
+    # Check basic information
     assert "### Table: `test-project.test_dataset.test_table`" in result
-    assert "テスト用テーブル" in result
+    assert "Test table" in result
 
-    # スキーマテーブルヘッダーの確認
+    # Check schema table header
     assert "| Column Name | Data Type | Mode | Details |" in result
     assert "|---------|---------|--------|------|" in result
 
-    # カラム情報の確認
+    # Check column information
     assert "| id | INTEGER | REQUIRED | ID |" in result
-    assert "| name | STRING | NULLABLE | 名前 |" in result
+    assert "| name | STRING | NULLABLE | Name |" in result
 
 
 def test_convert_tables_to_markdown_with_nested_fields():
-    """ネストされたフィールドを持つテーブルを変換するテスト"""
-    # ネストされたフィールドを持つカラム
+    """Test converting table with nested fields"""
+    # Column with nested fields
     nested_fields = [
         ColumnSchema(
-            name="street", type="STRING", mode="NULLABLE", description="通り名"
+            name="street", type="STRING", mode="NULLABLE", description="Street name"
         ),
-        ColumnSchema(
-            name="city", type="STRING", mode="NULLABLE", description="市区町村"
-        ),
+        ColumnSchema(name="city", type="STRING", mode="NULLABLE", description="City"),
     ]
 
-    # さらにネストされたフィールド
+    # Further nested fields
     deep_nested_fields = [
-        ColumnSchema(name="first", type="STRING", mode="NULLABLE", description="名"),
-        ColumnSchema(name="last", type="STRING", mode="NULLABLE", description="姓"),
+        ColumnSchema(
+            name="first", type="STRING", mode="NULLABLE", description="First name"
+        ),
+        ColumnSchema(
+            name="last", type="STRING", mode="NULLABLE", description="Last name"
+        ),
     ]
 
     columns = [
@@ -77,20 +79,20 @@ def test_convert_tables_to_markdown_with_nested_fields():
             name="address",
             type="RECORD",
             mode="NULLABLE",
-            description="住所情報",
+            description="Address information",
             fields=nested_fields,
         ),
         ColumnSchema(
             name="name",
             type="RECORD",
             mode="NULLABLE",
-            description="氏名",
+            description="Full name",
             fields=[
                 ColumnSchema(
                     name="full_name",
                     type="RECORD",
                     mode="NULLABLE",
-                    description="フルネーム",
+                    description="Full name details",
                     fields=deep_nested_fields,
                 )
             ],
@@ -102,76 +104,76 @@ def test_convert_tables_to_markdown_with_nested_fields():
         dataset_id="test_dataset",
         table_id="test_table",
         full_table_id="test-project.test_dataset.test_table",
-        description="テスト用テーブル",
+        description="Test table",
         schema_=TableSchema(columns=columns),
     )
 
     result = converter.convert_tables_to_markdown([table])
 
-    # 基本情報の確認
+    # Check basic information
     assert "### Table: `test-project.test_dataset.test_table`" in result
 
-    # ネストされたフィールドの表示を確認
+    # Check display of nested fields
     assert "<details><summary>▶︎ View nested fields</summary>" in result
-    assert "- **street** (STRING, NULLABLE): 通り名" in result
-    assert "- **city** (STRING, NULLABLE): 市区町村" in result
+    assert "- **street** (STRING, NULLABLE): Street name" in result
+    assert "- **city** (STRING, NULLABLE): City" in result
 
-    # 深いネストのテスト
+    # Test deep nesting
     assert "<details><summary>▶︎ full_name details</summary>" in result
-    assert "- **first** (STRING, NULLABLE): 名" in result
-    assert "- **last** (STRING, NULLABLE): 姓" in result
+    assert "- **first** (STRING, NULLABLE): First name" in result
+    assert "- **last** (STRING, NULLABLE): Last name" in result
 
 
 def test_convert_nested_fields_to_markdown():
-    """_convert_nested_fields_to_markdownメソッドの単体テスト"""
+    """Unit test for _convert_nested_fields_to_markdown method"""
     fields = [
         ColumnSchema(
             name="item_id",
             type="INTEGER",
             mode="REQUIRED",
-            description="アイテムID",
+            description="Item ID",
         ),
         ColumnSchema(
             name="item_name",
             type="STRING",
             mode="NULLABLE",
-            description="アイテム名",
+            description="Item name",
         ),
     ]
 
     result = converter._convert_nested_fields_to_markdown(fields)
 
     assert "<details><summary>▶︎ View nested fields</summary>" in result
-    assert "- **item_id** (INTEGER, REQUIRED): アイテムID" in result
-    assert "- **item_name** (STRING, NULLABLE): アイテム名" in result
+    assert "- **item_id** (INTEGER, REQUIRED): Item ID" in result
+    assert "- **item_name** (STRING, NULLABLE): Item name" in result
     assert "</details>" in result
 
 
 def test_convert_nested_fields_to_markdown_with_indentation():
-    """インデントレベル付きの_convert_nested_fields_to_markdownメソッドのテスト"""
+    """Test _convert_nested_fields_to_markdown method with indentation level"""
     fields = [
         ColumnSchema(
             name="test_field",
             type="STRING",
             mode="NULLABLE",
-            description="テストフィールド",
+            description="Test field",
         )
     ]
 
-    # インデントレベル2でテスト
+    # Test with indentation level 2
     result = converter._convert_nested_fields_to_markdown(fields, indent_level=2)
 
-    assert "    - **test_field** (STRING, NULLABLE): テストフィールド" in result
+    assert "    - **test_field** (STRING, NULLABLE): Test field" in result
 
 
 def test_convert_tables_to_markdown_multiple_tables():
-    """複数テーブルの変換をテスト"""
+    """Test conversion of multiple tables"""
     table1 = TableMetadata(
         project_id="test-project",
         dataset_id="test_dataset",
         table_id="table1",
         full_table_id="test-project.test_dataset.table1",
-        description="テーブル1",
+        description="Table 1",
     )
 
     table2 = TableMetadata(
@@ -179,12 +181,12 @@ def test_convert_tables_to_markdown_multiple_tables():
         dataset_id="test_dataset",
         table_id="table2",
         full_table_id="test-project.test_dataset.table2",
-        description="テーブル2",
+        description="Table 2",
     )
 
     result = converter.convert_tables_to_markdown([table1, table2])
 
     assert "### Table: `test-project.test_dataset.table1`" in result
-    assert "テーブル1" in result
+    assert "Table 1" in result
     assert "### Table: `test-project.test_dataset.table2`" in result
-    assert "テーブル2" in result
+    assert "Table 2" in result

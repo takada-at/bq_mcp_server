@@ -9,7 +9,7 @@ from bq_mcp.core.entities import Settings
 from bq_mcp.repositories import log
 
 
-# .env ファイルを読み込む
+# Load .env file
 root = Path(__file__).parent.parent.parent.resolve()
 envpath = (root / ".env").resolve()
 
@@ -25,8 +25,8 @@ def get_settings() -> Settings:
 
 
 def init_setting() -> Settings:
-    # 設定インスタンスを作成
-    # 環境変数を読み込んで初期値作成
+    # Create settings instance
+    # Load environment variables and create initial values
     gcp_service_account_key_path = os.getenv("GCP_SERVICE_ACCOUNT_KEY_PATH", None)
     project_ids = os.getenv("PROJECT_IDS", "").split(",")
     dataset_filters_str = os.getenv("DATASET_FILTERS", "")
@@ -58,24 +58,24 @@ def init_setting() -> Settings:
     )
     logger = log.get_logger()
 
-    # --- 設定値の簡単なバリデーション ---
+    # --- Simple validation of configuration values ---
     if not settings.project_ids:
         logger.warning(
-            "警告: 環境変数 'PROJECT_IDS' が設定されていません。カンマ区切りでGCPプロジェクトIDを指定してください。"
+            "Warning: Environment variable 'PROJECT_IDS' is not set. Please specify GCP project IDs separated by commas."
         )
-        # 必要に応じてここで処理を停止させることも可能
+        # If needed, processing can be stopped here
         # raise ValueError("PROJECT_IDS is not set.")
 
     if settings.gcp_service_account_key_path and not os.path.exists(
         settings.gcp_service_account_key_path
     ):
         logger.warning(
-            f"警告: 指定されたGCPサービスアカウントキーファイルが見つかりません: {settings.gcp_service_account_key_path}"
+            f"Warning: The specified GCP service account key file was not found: {settings.gcp_service_account_key_path}"
         )
-        # 認証が必要な処理でエラーになるため、警告を表示
+        # Display warning as authentication will error in processes that require it
     elif not settings.gcp_service_account_key_path:
         logger.warning(
-            "情報: GCP_SERVICE_ACCOUNT_KEY_PATH が設定されていません。アプリケーションはデフォルトの認証情報（ADC）を使用しようとします。"
+            "Info: GCP_SERVICE_ACCOUNT_KEY_PATH is not set. The application will try to use default authentication credentials (ADC)."
         )
     return settings
 
@@ -84,16 +84,16 @@ def should_include_dataset(
     project_id: str, dataset_id: str, filters: List[str]
 ) -> bool:
     """
-    データセットがフィルター条件に一致するかどうかを判定します。
+    Determines whether a dataset matches filter conditions.
 
     Args:
-        project_id: プロジェクトID
-        dataset_id: データセットID
-        filters: フィルター条件のリスト（例: ["pj1.*", "pj2.dataset1"]）
+        project_id: Project ID
+        dataset_id: Dataset ID
+        filters: List of filter conditions (e.g., ["pj1.*", "pj2.dataset1"])
 
     Returns:
-        フィルター条件に一致する場合True、一致しない場合False
-        フィルターが空の場合は常にTrue（すべて含める）
+        True if matches filter conditions, False if not
+        Always True if filters are empty (include all)
     """
     if not filters:
         return True
@@ -101,7 +101,7 @@ def should_include_dataset(
     full_dataset_name = f"{project_id}.{dataset_id}"
 
     for filter_pattern in filters:
-        # フィルターパターンをfnmatchで評価
+        # Evaluate filter pattern with fnmatch
         if fnmatch.fnmatch(full_dataset_name, filter_pattern):
             return True
 

@@ -4,8 +4,8 @@
       "command": "uv",
       "args": [
         "run",
-        "mcp_server"
-      ]
+        "mcp_server",
+      ],
       "env": {
         "PYTHONPATH": "directory"
       }
