@@ -2,7 +2,6 @@
 .mcp.json
 .roo
 .env
-.claude/settings.local.json
 log
 bq_metadata_cache.json
 
