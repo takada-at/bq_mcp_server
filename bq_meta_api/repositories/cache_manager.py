@@ -334,25 +334,33 @@ async def update_cache_project(
     bq_client, project_id: str, logger, timestamp
 ) -> Tuple[str, List[DatasetMetadata], Dict[str, List[TableMetadata]]]:
     all_datasets = await bigquery_client.fetch_datasets(bq_client, project_id)
-    
+
     # データセットフィルターを適用
     settings = config.get_settings()
     if settings.dataset_filters:
         filtered_datasets = []
         for dataset in all_datasets:
-            if should_include_dataset(project_id, dataset.dataset_id, settings.dataset_filters):
+            if should_include_dataset(
+                project_id, dataset.dataset_id, settings.dataset_filters
+            ):
                 filtered_datasets.append(dataset)
-                logger.debug(f"データセット {project_id}.{dataset.dataset_id} がフィルター条件に一致しました")
+                logger.debug(
+                    f"データセット {project_id}.{dataset.dataset_id} がフィルター条件に一致しました"
+                )
             else:
-                logger.debug(f"データセット {project_id}.{dataset.dataset_id} がフィルター条件で除外されました")
+                logger.debug(
+                    f"データセット {project_id}.{dataset.dataset_id} がフィルター条件で除外されました"
+                )
         datasets = filtered_datasets
         logger.info(
             f"プロジェクト '{project_id}' から {len(all_datasets)} 個のデータセットを取得し、フィルター後 {len(datasets)} 個が対象となりました。"
         )
     else:
         datasets = all_datasets
-        logger.info(f"プロジェクト '{project_id}' から {len(datasets)} 個のデータセット情報を取得しました。")
-    
+        logger.info(
+            f"プロジェクト '{project_id}' から {len(datasets)} 個のデータセット情報を取得しました。"
+        )
+
     project_tables = {}
     tasks = [
         asyncio.create_task(

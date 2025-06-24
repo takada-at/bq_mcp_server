@@ -86,7 +86,7 @@ def generate_env_example(env_vars: List[Tuple[str, Any, str]], output_path: Path
 
     # カテゴリ別にグループ化
     categories = {
-        "GCP Settings": ["GCP_SERVICE_ACCOUNT_KEY_PATH", "PROJECT_IDS"],
+        "GCP Settings": ["GCP_SERVICE_ACCOUNT_KEY_PATH", "PROJECT_IDS", "DATASET_FILTERS"],
         "Cache Settings": ["CACHE_TTL_SECONDS", "CACHE_FILE_BASE_DIR"],
         "API Server Settings": ["API_HOST", "API_PORT"],
         "Query Execution Settings": [

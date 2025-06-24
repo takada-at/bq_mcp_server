@@ -80,27 +80,29 @@ def init_setting() -> Settings:
     return settings
 
 
-def should_include_dataset(project_id: str, dataset_id: str, filters: List[str]) -> bool:
+def should_include_dataset(
+    project_id: str, dataset_id: str, filters: List[str]
+) -> bool:
     """
     データセットがフィルター条件に一致するかどうかを判定します。
-    
+
     Args:
         project_id: プロジェクトID
         dataset_id: データセットID
         filters: フィルター条件のリスト（例: ["pj1.*", "pj2.dataset1"]）
-    
+
     Returns:
         フィルター条件に一致する場合True、一致しない場合False
         フィルターが空の場合は常にTrue（すべて含める）
     """
     if not filters:
         return True
-    
+
     full_dataset_name = f"{project_id}.{dataset_id}"
-    
+
     for filter_pattern in filters:
         # フィルターパターンをfnmatchで評価
         if fnmatch.fnmatch(full_dataset_name, filter_pattern):
             return True
-    
+
     return False
