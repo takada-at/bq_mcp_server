@@ -159,6 +159,10 @@ class Settings(BaseModel):
         ...,
         description="GCPプロジェクトIDのリスト",
     )
+    dataset_filters: List[str] = Field(
+        default_factory=list,
+        description="データセットフィルターのリスト（例: pj1.*,pj2.dataset1）",
+    )
     # キャッシュ設定
     cache_ttl_seconds: int = Field(
         3600,

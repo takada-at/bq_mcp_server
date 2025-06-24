@@ -1,7 +1,9 @@
 # config.py: Manages application configuration settings
 import os
+import fnmatch
 from dotenv import load_dotenv
 from pathlib import Path
+from typing import List
 
 from bq_meta_api.core.entities import Settings
 from bq_meta_api.repositories import log
@@ -27,6 +29,8 @@ def init_setting() -> Settings:
     # 環境変数を読み込んで初期値作成
     gcp_service_account_key_path = os.getenv("GCP_SERVICE_ACCOUNT_KEY_PATH", None)
     project_ids = os.getenv("PROJECT_IDS", "").split(",")
+    dataset_filters_str = os.getenv("DATASET_FILTERS", "")
+    dataset_filters = [f.strip() for f in dataset_filters_str.split(",") if f.strip()]
     cache_ttl_seconds = int(os.getenv("CACHE_TTL_SECONDS", 3600))
     cache_file_base_dir = os.getenv(
         "CACHE_FILE_BASE_DIR", str(root / ".bq_metadata_cache")
@@ -43,6 +47,7 @@ def init_setting() -> Settings:
     settings = Settings(
         gcp_service_account_key_path=gcp_service_account_key_path,
         project_ids=project_ids,
+        dataset_filters=dataset_filters,
         cache_ttl_seconds=cache_ttl_seconds,
         cache_file_base_dir=cache_file_base_dir,
         api_host=api_host,
@@ -73,3 +78,31 @@ def init_setting() -> Settings:
             "情報: GCP_SERVICE_ACCOUNT_KEY_PATH が設定されていません。アプリケーションはデフォルトの認証情報（ADC）を使用しようとします。"
         )
     return settings
+
+
+def should_include_dataset(
+    project_id: str, dataset_id: str, filters: List[str]
+) -> bool:
+    """
+    データセットがフィルター条件に一致するかどうかを判定します。
+
+    Args:
+        project_id: プロジェクトID
+        dataset_id: データセットID
+        filters: フィルター条件のリスト（例: ["pj1.*", "pj2.dataset1"]）
+
+    Returns:
+        フィルター条件に一致する場合True、一致しない場合False
+        フィルターが空の場合は常にTrue（すべて含める）
+    """
+    if not filters:
+        return True
+
+    full_dataset_name = f"{project_id}.{dataset_id}"
+
+    for filter_pattern in filters:
+        # フィルターパターンをfnmatchで評価
+        if fnmatch.fnmatch(full_dataset_name, filter_pattern):
+            return True
+
+    return False
