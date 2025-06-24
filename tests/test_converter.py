@@ -45,7 +45,7 @@ def test_convert_tables_to_markdown_table_with_simple_schema():
     assert "テスト用テーブル" in result
 
     # スキーマテーブルヘッダーの確認
-    assert "| カラム名 | データ型 | モード | 詳細 |" in result
+    assert "| Column Name | Data Type | Mode | Details |" in result
     assert "|---------|---------|--------|------|" in result
 
     # カラム情報の確認
@@ -112,12 +112,12 @@ def test_convert_tables_to_markdown_with_nested_fields():
     assert "### Table: `test-project.test_dataset.test_table`" in result
 
     # ネストされたフィールドの表示を確認
-    assert "<details><summary>▶︎ ネストを見る</summary>" in result
+    assert "<details><summary>▶︎ View nested fields</summary>" in result
     assert "- **street** (STRING, NULLABLE): 通り名" in result
     assert "- **city** (STRING, NULLABLE): 市区町村" in result
 
     # 深いネストのテスト
-    assert "<details><summary>▶︎ full_name の詳細</summary>" in result
+    assert "<details><summary>▶︎ full_name details</summary>" in result
     assert "- **first** (STRING, NULLABLE): 名" in result
     assert "- **last** (STRING, NULLABLE): 姓" in result
 
@@ -141,7 +141,7 @@ def test_convert_nested_fields_to_markdown():
 
     result = converter._convert_nested_fields_to_markdown(fields)
 
-    assert "<details><summary>▶︎ ネストを見る</summary>" in result
+    assert "<details><summary>▶︎ View nested fields</summary>" in result
     assert "- **item_id** (INTEGER, REQUIRED): アイテムID" in result
     assert "- **item_name** (STRING, NULLABLE): アイテム名" in result
     assert "</details>" in result

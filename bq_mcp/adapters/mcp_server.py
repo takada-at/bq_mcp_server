@@ -1,10 +1,11 @@
 # /// script
-# requires-python = ">=3.11"
+# requires-python = ">=3.10"
 # dependencies = [
 #     "gcloud-aio-bigquery>=7.1.0",
 #     "google-cloud-bigquery>=3.31.0",
 #     "pydantic>=2.11.3",
 #     "python-dotenv>=1.1.0",
+#     "mcp[cli]>=1.6.0",
 # ]
 # ///
 from contextlib import asynccontextmanager

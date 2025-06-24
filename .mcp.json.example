@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "bigquery_ai": {
+    "bq_mcp": {
       "command": "uv",
       "args": [
         "run",

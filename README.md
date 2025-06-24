@@ -1,139 +1,132 @@
 # BigQuery MCP Server
 
-[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Framework](https://img.shields.io/badge/Framework-FastAPI-green.svg)](https://fastapi.tiangolo.com/)
 
-Google Cloud BigQueryのデータセット、テーブル、スキーマ情報を取得し、ローカルにキャッシュしてMCP経由で提供するPythonのMCPサーバーです。生成AIなどがBigQueryの構造を迅速に把握し、安全にクエリを実行することを目的としています。
+This is a Python-based MCP (Model Context Protocol) server that retrieves dataset, table, and schema information from Google Cloud BigQuery, caches it locally, and serves it via MCP. Its primary purpose is to enable generative AI systems to quickly understand BigQuery's structure and execute queries securely.
 
-## 主な機能
+## Key Features
 
-- **メタデータ管理**: BigQueryのデータセット、テーブル、カラム情報の取得とキャッシュ
-- **全文検索**: キャッシュされたメタデータに対するキーワード検索
-- **安全なクエリ実行**: 自動的なLIMIT句付与とコスト制御を備えたSQL実行機能
-- **MCP対応**: Model Context Protocol経由でのツール提供
-- **REST API**: FastAPIベースのWebエンドポイント
+- **Metadata Management**: Retrieves and caches information about BigQuery datasets, tables, and columns
+- **Full-Text Search**: Supports keyword search of cached metadata
+- **Secure Query Execution**: Provides SQL execution capabilities with automatic LIMIT clause insertion and cost control
+- **MCP Compliance**: Offers tools via the Model Context Protocol
+- **REST API**: Includes a web endpoint built with FastAPI
 
-## MCPサーバー
+## MCP Server Tools
 
-利用可能なツール:
+Available tools:
 
-1. `get_datasets` - 全データセットのリストを取得
-2. `get_tables` - 指定データセット内の全テーブルを取得（dataset_id必須、project_id任意）
-3. `search_metadata` - データセット、テーブル、カラムのメタデータを検索
-4. `execute_query` - BigQuery SQLクエリの安全な実行（自動LIMIT付与、コスト制御付き）
-5. `check_query_scan_amount` - BigQuery SQLのスキャン量取得
+1. `get_datasets` - Retrieves a list of all datasets
+2. `get_tables` - Retrieves all tables within a specified dataset (requires dataset_id, optionally accepts project_id)
+3. `search_metadata` - Searches metadata for datasets, tables, and columns
+4. `execute_query` - Safely executes BigQuery SQL queries with automatic LIMIT clause insertion and cost control
+5. `check_query_scan_amount` - Retrieves the scan amount for BigQuery SQL queries
 
-## インストールと環境設定
+## Installation and Environment Setup
 
-### 前提条件
+### Prerequisites
 
-- Python 3.11以上
-- Google Cloud Platform アカウント
-- BigQuery API が有効化されたGCPプロジェクト
+- Python 3.11 or later
+- Google Cloud Platform account
+- GCP project with BigQuery API enabled
 
-### 依存関係のインストール
+### Installing Dependencies
 
-このプロジェクトでは `uv` を使用してパッケージ管理を行います：
+This project uses `uv` for package management:
 
 ```bash
-# uvのインストール（未インストールの場合）
+# Install uv if not already installed
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 依存関係のインストール
+# Install dependencies
 uv sync
 ```
 
-### 環境変数の設定
+### Configuring Environment Variables
 
 ```bash
-# 環境変数ファイルを生成
+# Generate environment variable file
 python scripts/generate_env_example.py
 
-# .env.exampleを.envにコピーして編集
+# Copy and edit .env.example to create .env
 cp .env.example .env
 ```
 
-必要な環境変数：
+Required environment variables:
 
-- `PROJECT_IDS` - カンマ区切りのGCPプロジェクトIDリスト
+- `PROJECT_IDS` - A comma-separated list of GCP project IDs
 
-## テスト実行
+## Running Tests
 
-### 全テストの実行
+### Running All Tests
 
 ```bash
 pytest
 ```
 
-### 特定のテストファイルを実行
+### Running Specific Test Files
 
 ```bash
 pytest tests/test_logic.py
 ```
 
-### 特定のテスト関数を実行
+### Running Specific Test Functions
 
 ```bash
 pytest -k test_function_name
 ```
 
-### テストカバレッジを確認
+### Checking Test Coverage
 
 ```bash
 pytest --cov=bq_mcp
 ```
 
-## ローカル開発
+## Local Development
 
-### MCPサーバーの起動
+### Starting the MCP Server
 
 ```bash
 python -m bq_meta_api.adapters.mcp_server
 ```
 
-### FastAPI REST APIサーバーの起動
+### Starting the FastAPI REST API Server
 
 ```bash
 python -m bq_meta_api.adapters.web
 ```
 
-### Gradio Webインターフェースの起動
+### Starting the Gradio Web Interface
 
 ```bash
 python -m bq_meta_api.adapters.bq_agent_gradio
 ```
 
-### 開発用コマンド
+### Development Commands
 
-#### コードフォーマットとリンティング
+#### Code Formatting and Linting
 
 ```bash
-# コードフォーマット
+# Code formatting
 ruff format
 
-# リンティングチェック
+# Linting checks
 ruff check
 
-# 自動修正
+# Automatic fixes
 ruff check --fix
 ```
 
-#### 複雑度解析
+#### Dependency Management
 
 ```bash
-# 循環的複雑度の分析
-lizard
-```
-
-#### 依存関係管理
-
-```bash
-# 新しい依存関係を追加
+# Adding new dependencies
 uv add <package>
 
-# 開発用依存関係を追加
+# Adding development dependencies
 uv add --dev <package>
 
-# 依存関係の更新
+# Updating dependencies
 uv sync
 ```

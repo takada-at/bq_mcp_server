@@ -14,29 +14,29 @@ from bq_mcp.repositories import cache_manager, log
 from bq_mcp.repositories.query_executor import QueryExecutor
 
 
-# --- ヘルパー関数 ---
+# --- Helper Functions ---
 async def get_current_cache() -> CachedData:
-    """現在の有効なキャッシュデータを取得する。なければエラーを発生させる。"""
+    """Get current valid cache data. Raise error if not available."""
     logger = log.get_logger()
-    cache = cache_manager.load_cache()  # まずメモリ/ファイルから試す
+    cache = cache_manager.load_cache()  # First try from memory/file
     if cache and cache_manager.is_cache_valid(cache):
         return cache
-    # キャッシュが無効または存在しない場合は更新を試みる
-    logger.info("キャッシュが無効または存在しないため、更新を試みます...")
+    # Try to update if cache is invalid or doesn't exist
+    logger.info("Cache is invalid or doesn't exist, attempting to update...")
     # cache_manager.update_cache() is now async
     updated_cache = await cache_manager.update_cache()
     if not updated_cache:
-        logger.error("キャッシュの更新に失敗しました。")
+        logger.error("Failed to update cache.")
         raise HTTPException(
             status_code=503,
-            detail="キャッシュデータの取得に失敗しました。サーバーが利用できません。",
+            detail="Failed to retrieve cache data. Server is unavailable.",
         )
     return updated_cache
 
 
 async def get_datasets() -> DatasetListResponse:
-    """全プロジェクトのデータセット一覧を返す"""
-    # グローバルキャッシュからデータセット一覧を取得
+    """Return list of datasets from all projects"""
+    # Get dataset list from global cache
     logger = log.get_logger()
     try:
         cache = await get_current_cache()
@@ -47,21 +47,21 @@ async def get_datasets() -> DatasetListResponse:
     except HTTPException:  # Specific HTTPException should be re-raised
         raise
     except Exception as e:
-        logger.error(f"データセット一覧の取得中にエラーが発生: {e}")
+        logger.error(f"Error occurred while retrieving dataset list: {e}")
         logger.error(traceback.format_exception(e))
         raise HTTPException(
             status_code=503,
-            detail="データセット一覧の取得に失敗しました。サーバーが利用できません。",
+            detail="Failed to retrieve dataset list. Server is unavailable.",
         )
 
 
 async def get_datasets_by_project(project_id: str) -> DatasetListResponse:
-    """指定されたプロジェクトのデータセット一覧を返す"""
+    """Return list of datasets for the specified project"""
     cache = await get_current_cache()
     if project_id not in cache.datasets:
         raise HTTPException(
             status_code=404,
-            detail=f"プロジェクト '{project_id}' は見つかりません。",
+            detail=f"Project '{project_id}' not found.",
         )
     return DatasetListResponse(datasets=cache.datasets[project_id])
 
@@ -69,18 +69,18 @@ async def get_datasets_by_project(project_id: str) -> DatasetListResponse:
 async def get_tables(
     dataset_id: str, project_id: Optional[str] = None
 ) -> List[TableMetadata]:
-    """指定されたデータセットのテーブル一覧を返す
+    """Return list of tables for the specified dataset
     Args:
-        dataset_id: データセットID
-        project_id: プロジェクトID（オプション）
+        dataset_id: Dataset ID
+        project_id: Project ID (optional)
     Returns:
-        List[TableMetadata]: テーブルメタデータのリスト
+        List[TableMetadata]: List of table metadata
     Raises:
-        HTTPException: プロジェクトまたはデータセットが見つからない場合
+        HTTPException: When project or dataset is not found
     """
     found_tables: List[TableMetadata] = []
     if project_id:
-        # プロジェクトIDが指定されている場合、そのデータセットのキャッシュを直接取得
+        # If project ID is specified, get cache for that dataset directly
         # cache_manager.get_cached_dataset_data is now async
         dataset, tables = await cache_manager.get_cached_dataset_data(
             project_id, dataset_id
@@ -88,11 +88,11 @@ async def get_tables(
         if dataset is None:
             raise HTTPException(
                 status_code=404,
-                detail=f"データセット '{project_id}.{dataset_id}' は見つかりません。",
+                detail=f"Dataset '{project_id}.{dataset_id}' not found.",
             )
         return tables
     else:
-        # プロジェクトIDが指定されていない場合、すべてのプロジェクトから検索
+        # If project ID is not specified, search across all projects
         cache = await get_current_cache()
         found_dataset = False
         settings = config.get_settings()
@@ -111,7 +111,7 @@ async def get_tables(
         if not found_dataset:
             raise HTTPException(
                 status_code=404,
-                detail=f"データセット '{dataset_id}' は見つかりません。",
+                detail=f"Dataset '{dataset_id}' not found.",
             )
 
         return found_tables
@@ -120,7 +120,7 @@ async def get_tables(
 async def check_query_scan_amount(
     sql: str, project_id: Optional[str] = None
 ) -> QueryDryRunResult:
-    """BigQueryクエリのスキャン量を事前にチェックする（元のクエリのまま）"""
+    """Check BigQuery scan amount in advance (original query as-is)"""
     logger = log.get_logger()
     settings = config.get_settings()
 
@@ -128,24 +128,26 @@ async def check_query_scan_amount(
         query_executor = QueryExecutor(settings)
         result = await query_executor.check_scan_amount(sql, project_id)
 
-        logger.info(f"スキャン量チェック完了: {result.total_bytes_processed:,} bytes")
+        logger.info(
+            f"Scan amount check completed: {result.total_bytes_processed:,} bytes"
+        )
         return result
 
     except HTTPException as http_exc:
-        logger.error(f"スキャン量チェックでHTTPエラー: {http_exc.detail}")
+        logger.error(f"HTTP error in scan amount check: {http_exc.detail}")
         raise http_exc
     except Exception as e:
-        logger.error(f"スキャン量チェックでエラーが発生しました: {e}")
+        logger.error(f"Error occurred during scan amount check: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"スキャン量チェック中にエラーが発生しました: {str(e)}",
+            detail=f"Error occurred during scan amount check: {str(e)}",
         )
 
 
 async def execute_query(
     sql: str, project_id: Optional[str] = None, force: bool = False
 ) -> QueryExecutionResult:
-    """BigQueryクエリを安全に実行する"""
+    """Execute BigQuery query safely"""
 
     logger = log.get_logger()
     settings = config.get_settings()
@@ -157,13 +159,15 @@ async def execute_query(
         )
 
         if result.success:
-            logger.info(f"クエリ実行成功 - 結果行数: {result.total_rows}")
+            logger.info(
+                f"Query execution successful - result rows: {result.total_rows}"
+            )
         else:
-            logger.warning(f"クエリ実行失敗: {result.error_message}")
+            logger.warning(f"Query execution failed: {result.error_message}")
 
         return result
     except Exception as e:
-        logger.error(f"クエリ実行中にエラーが発生: {e}")
+        logger.error(f"Error occurred during query execution: {e}")
         raise HTTPException(
-            status_code=500, detail="クエリ実行中に内部エラーが発生しました。"
+            status_code=500, detail="Internal error occurred during query execution."
         )
