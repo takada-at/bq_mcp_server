@@ -351,9 +351,7 @@ async def update_cache_project(
         )
     else:
         datasets = all_datasets
-        logger.info(
-            f"プロジェクト '{project_id}' から {len(datasets)} 個のデータセット情報を取得しました。"
-        )
+        logger.info(f"プロジェクト '{project_id}' から {len(datasets)} 個のデータセット情報を取得しました。")
     
     project_tables = {}
     tasks = [
