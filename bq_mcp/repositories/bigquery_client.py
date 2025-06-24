@@ -159,7 +159,7 @@ async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetada
             project=project_id, session=client.session.session, token=client.token
         ).list_datasets(params=params)
 
-    # ページネーション処理を共通関数で実行
+    # Execute pagination processing with common function
     datasets_list = await _paginate_bigquery_api(
         api_call=list_datasets_api,
         items_key="datasets",

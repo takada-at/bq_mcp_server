@@ -178,7 +178,7 @@ async def test_search_metadata_dataset_description(
 @pytest.mark.asyncio
 @patch("bq_mcp.repositories.cache_manager.get_cached_data")
 async def test_search_metadata_table_name(mock_get_cached_data, test_cached_data):
-    """テーブル名でキーワードマッチする場合のテスト"""
+    """Test case for keyword matching in table name"""
     # Mock cache data
     mock_get_cached_data.return_value = test_cached_data
 
