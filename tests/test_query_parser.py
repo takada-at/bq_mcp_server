@@ -2,7 +2,7 @@
 Tests for SQL query parser functionality
 """
 
-from bq_meta_api.core.query_parser import QueryParser
+from bq_mcp.core.query_parser import QueryParser
 
 
 class TestQueryParser:

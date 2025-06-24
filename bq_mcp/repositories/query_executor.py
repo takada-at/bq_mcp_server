@@ -8,9 +8,9 @@ from google.cloud import bigquery
 from google.cloud.bigquery import QueryJobConfig
 from fastapi import HTTPException
 
-from bq_meta_api.core.entities import QueryDryRunResult, QueryExecutionResult, Settings
-from bq_meta_api.core.query_parser import QueryParser
-from bq_meta_api.repositories import log
+from bq_mcp.core.entities import QueryDryRunResult, QueryExecutionResult, Settings
+from bq_mcp.core.query_parser import QueryParser
+from bq_mcp.repositories import log
 
 
 class QueryExecutor:

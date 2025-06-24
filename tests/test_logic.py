@@ -4,8 +4,8 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi import HTTPException
 
 # Import the functions to be tested
-from bq_meta_api.core import logic
-from bq_meta_api.core.entities import (
+from bq_mcp.core import logic
+from bq_mcp.core.entities import (
     CachedData,
     DatasetMetadata,
     TableMetadata,
@@ -14,8 +14,8 @@ from bq_meta_api.core.entities import (
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.cache_manager")
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.cache_manager")
 async def test_get_current_cache_valid_direct(mock_cache_manager, mock_get_logger):
     """Tests get_current_cache when the cache is valid and loaded directly."""
     # Setup mocks
@@ -38,8 +38,8 @@ async def test_get_current_cache_valid_direct(mock_cache_manager, mock_get_logge
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.cache_manager")
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.cache_manager")
 async def test_get_current_cache_loaded_after_none(mock_cache_manager, mock_get_logger):
     """Tests get_current_cache when cache is initially None and reloaded."""
     # Setup mocks
@@ -71,8 +71,8 @@ async def test_get_current_cache_loaded_after_none(mock_cache_manager, mock_get_
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.cache_manager")
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.cache_manager")
 async def test_get_current_cache_loaded_after_invalid(
     mock_cache_manager, mock_get_logger
 ):
@@ -108,8 +108,8 @@ async def test_get_current_cache_loaded_after_invalid(
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.cache_manager")
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.cache_manager")
 async def test_get_current_cache_update_fails(mock_cache_manager, mock_get_logger):
     """Tests get_current_cache when cache update fails, expecting HTTPException 503."""
     # Setup mocks
@@ -142,8 +142,8 @@ async def test_get_current_cache_update_fails(mock_cache_manager, mock_get_logge
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.get_current_cache", new_callable=AsyncMock)
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.get_current_cache", new_callable=AsyncMock)
 async def test_get_datasets_successful_retrieval(
     mock_get_current_cache, mock_get_logger
 ):
@@ -177,8 +177,8 @@ async def test_get_datasets_successful_retrieval(
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.get_current_cache", new_callable=AsyncMock)
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.get_current_cache", new_callable=AsyncMock)
 async def test_get_datasets_no_datasets_in_cache(
     mock_get_current_cache, mock_get_logger
 ):
@@ -200,8 +200,8 @@ async def test_get_datasets_no_datasets_in_cache(
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.get_current_cache", new_callable=AsyncMock)
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.get_current_cache", new_callable=AsyncMock)
 async def test_get_datasets_http_exception_propagates(
     mock_get_current_cache, mock_get_logger
 ):
@@ -223,8 +223,8 @@ async def test_get_datasets_http_exception_propagates(
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.get_current_cache", new_callable=AsyncMock)
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.get_current_cache", new_callable=AsyncMock)
 async def test_get_datasets_generic_exception_triggers_http_exception(
     mock_get_current_cache, mock_get_logger
 ):
@@ -254,8 +254,8 @@ async def test_get_datasets_generic_exception_triggers_http_exception(
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.get_current_cache", new_callable=AsyncMock)
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.get_current_cache", new_callable=AsyncMock)
 async def test_get_datasets_by_project_successful_retrieval(
     mock_get_current_cache, mock_get_logger
 ):
@@ -289,8 +289,8 @@ async def test_get_datasets_by_project_successful_retrieval(
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.get_current_cache", new_callable=AsyncMock)
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.get_current_cache", new_callable=AsyncMock)
 async def test_get_datasets_by_project_project_not_found(
     mock_get_current_cache, mock_get_logger
 ):
@@ -321,8 +321,8 @@ async def test_get_datasets_by_project_project_not_found(
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.get_current_cache", new_callable=AsyncMock)
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.get_current_cache", new_callable=AsyncMock)
 async def test_get_datasets_by_project_http_exception_propagates(
     mock_get_current_cache, mock_get_logger
 ):
@@ -344,10 +344,10 @@ async def test_get_datasets_by_project_http_exception_propagates(
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.cache_manager")
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.cache_manager")
 @patch(
-    "bq_meta_api.core.logic.get_current_cache", new_callable=AsyncMock
+    "bq_mcp.core.logic.get_current_cache", new_callable=AsyncMock
 )  # Not used in this path, but good to have for consistency
 async def test_get_tables_project_id_provided_dataset_found(
     mock_get_current_cache, mock_cache_manager, mock_get_logger
@@ -393,8 +393,8 @@ async def test_get_tables_project_id_provided_dataset_found(
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.cache_manager")
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.cache_manager")
 async def test_get_tables_project_id_provided_dataset_not_found(
     mock_cache_manager, mock_get_logger
 ):
@@ -424,10 +424,10 @@ async def test_get_tables_project_id_provided_dataset_not_found(
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.config")
-@patch("bq_meta_api.core.logic.cache_manager")
-@patch("bq_meta_api.core.logic.get_current_cache", new_callable=AsyncMock)
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.config")
+@patch("bq_mcp.core.logic.cache_manager")
+@patch("bq_mcp.core.logic.get_current_cache", new_callable=AsyncMock)
 async def test_get_tables_no_project_id_dataset_found(
     mock_get_current_cache, mock_cache_manager, mock_config, mock_get_logger
 ):
@@ -492,10 +492,10 @@ async def test_get_tables_no_project_id_dataset_found(
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.config")
-@patch("bq_meta_api.core.logic.cache_manager")
-@patch("bq_meta_api.core.logic.get_current_cache", new_callable=AsyncMock)
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.config")
+@patch("bq_mcp.core.logic.cache_manager")
+@patch("bq_mcp.core.logic.get_current_cache", new_callable=AsyncMock)
 async def test_get_tables_no_project_id_dataset_not_found(
     mock_get_current_cache, mock_cache_manager, mock_config, mock_get_logger
 ):
@@ -548,9 +548,9 @@ async def test_get_tables_no_project_id_dataset_not_found(
 
 
 @pytest.mark.asyncio
-@patch("bq_meta_api.core.logic.log.get_logger")
-@patch("bq_meta_api.core.logic.config")  # Mock config as it's used in the function
-@patch("bq_meta_api.core.logic.get_current_cache", new_callable=AsyncMock)
+@patch("bq_mcp.core.logic.log.get_logger")
+@patch("bq_mcp.core.logic.config")  # Mock config as it's used in the function
+@patch("bq_mcp.core.logic.get_current_cache", new_callable=AsyncMock)
 async def test_get_tables_no_project_id_get_current_cache_http_exception(
     mock_get_current_cache, mock_config, mock_get_logger
 ):

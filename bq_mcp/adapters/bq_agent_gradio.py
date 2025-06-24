@@ -2,9 +2,9 @@ import json
 
 from pydantic_ai.messages import ToolCallPart, ToolReturnPart
 
-from bq_meta_api.adapters.agent import agent as bq_agent
-from bq_meta_api.core.entities import ApplicationContext
-from bq_meta_api.repositories import cache_manager, config, log
+from bq_mcp.adapters.agent import agent as bq_agent
+from bq_mcp.core.entities import ApplicationContext
+from bq_mcp.repositories import cache_manager, config, log
 
 try:
     import gradio as gr

@@ -1,4 +1,4 @@
-# BigQuery Metadata API Server
+# BigQuery MCP Server
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![Framework](https://img.shields.io/badge/Framework-FastAPI-green.svg)](https://fastapi.tiangolo.com/)
@@ -21,4 +21,5 @@ Google Cloud BigQueryのデータセット、テーブル、スキーマ情報�
 2. `get_tables` - 指定データセット内の全テーブルを取得（dataset_id必須、project_id任意）
 3. `search_metadata` - データセット、テーブル、カラムのメタデータを検索
 4. `execute_query` - BigQuery SQLクエリの安全な実行（自動LIMIT付与、コスト制御付き）
+5. `check_query_scan_amount` - BigQuery SQLのスキャン量取得
 

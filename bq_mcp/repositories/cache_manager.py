@@ -4,10 +4,10 @@ import json
 import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
-from bq_meta_api.repositories import config
-from bq_meta_api.core.entities import CachedData, DatasetMetadata, TableMetadata
-from bq_meta_api.repositories import bigquery_client, log
-from bq_meta_api.repositories.config import should_include_dataset
+from bq_mcp.repositories import config
+from bq_mcp.core.entities import CachedData, DatasetMetadata, TableMetadata
+from bq_mcp.repositories import bigquery_client, log
+from bq_mcp.repositories.config import should_include_dataset
 
 
 # インメモリキャッシュ（シングルトン的に保持）

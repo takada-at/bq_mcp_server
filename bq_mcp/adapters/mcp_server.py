@@ -4,9 +4,9 @@ from mcp.server.fastmcp import FastMCP
 from typing import Optional
 
 
-from bq_meta_api.core import converter, logic
-from bq_meta_api.core.entities import ApplicationContext
-from bq_meta_api.repositories import cache_manager, config, log, search_engine
+from bq_mcp.core import converter, logic
+from bq_mcp.core.entities import ApplicationContext
+from bq_mcp.repositories import cache_manager, config, log, search_engine
 
 
 @asynccontextmanager

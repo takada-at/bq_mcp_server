@@ -5,14 +5,14 @@ from typing import List, Optional, Dict, Any, Callable, Awaitable
 from gcloud.aio.bigquery import Dataset, Table
 from gcloud.aio.auth.token import Token
 from google.auth.exceptions import DefaultCredentialsError, RefreshError
-from bq_meta_api.repositories import config
-from bq_meta_api.core.entities import (
+from bq_mcp.repositories import config
+from bq_mcp.core.entities import (
     DatasetMetadata,
     TableMetadata,
     TableSchema,
     ColumnSchema,
 )
-from bq_meta_api.repositories import log
+from bq_mcp.repositories import log
 
 
 def get_bigquery_client() -> Optional[Dataset]:

@@ -1,5 +1,5 @@
 [project]
-name = "bigquery-ai"
+name = "bq_mcp"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -25,10 +25,10 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=bq_meta_api --cov-report=term-missing --cov-report=html"
+addopts = "--cov=bq_mcp --cov-report=term-missing --cov-report=html"
 
 [tool.coverage.run]
-source = ["bq_meta_api"]
+source = ["bq_mcp"]
 omit = [
     "*/tests/*",
     "*/__pycache__/*",

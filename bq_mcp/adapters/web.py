@@ -4,8 +4,8 @@ from fastapi import FastAPI, HTTPException, Query, Path as FastApiPath
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from typing import List, Optional, Literal
 
-from bq_meta_api.core import converter, logic
-from bq_meta_api.core.entities import (
+from bq_mcp.core import converter, logic
+from bq_mcp.core.entities import (
     ApplicationContext,
     DatasetListResponse,
     QueryExecutionRequest,
@@ -14,7 +14,7 @@ from bq_meta_api.core.entities import (
     TableListResponse,
     TableMetadata,
 )
-from bq_meta_api.repositories import cache_manager, config, log, search_engine
+from bq_mcp.repositories import cache_manager, config, log, search_engine
 
 
 @asynccontextmanager
@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="BigQuery Metadata API Server",
+    title="BigQuery MCP Server",
     description="Provides access to cached BigQuery dataset, table, and schema information.",
     version="0.1.0",
     lifespan=lifespan,
@@ -225,6 +225,6 @@ async def execute_query(request: QueryExecutionRequest):
 # このファイルが直接実行された場合にuvicornを起動
 if __name__ == "__main__":
     # main:app を指定するため、このファイル自体を実行するのではなく、
-    # コマンドラインから `uvicorn bq_meta_api.main:app --reload --host 0.0.0.0 --port 8000` のように実行する
+    # コマンドラインから `uvicorn bq_mcp.main:app --reload --host 0.0.0.0 --port 8000` のように実行する
     print("サーバーを起動するには、以下のコマンドを実行してください:")
-    print("uvicorn bq_meta_api.adapters.web:app --reload")
+    print("uvicorn bq_mcp.adapters.web:app --reload")

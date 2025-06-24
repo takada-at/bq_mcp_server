@@ -2,7 +2,7 @@ from pathlib import Path
 import logging
 
 
-from bq_meta_api.core.entities import LogSetting
+from bq_mcp.core.entities import LogSetting
 
 
 logger = None
@@ -33,11 +33,11 @@ def init_logger(log_to_console: bool = True) -> LogSetting:
             DEFAULT_LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             log_dir = Path(Path(__file__).parent / "../../logs").resolve()
             log_dir.mkdir(parents=True, exist_ok=True)
-            log_file = log_dir / "bq_meta_api.log"
+            log_file = log_dir / "bq_mcp.log"
             formatter = logging.Formatter(DEFAULT_LOG_FORMAT)
             file_handler = logging.FileHandler(log_file)
             file_handler.setFormatter(formatter)
-            logger = logging.getLogger("bq_meta_api")
+            logger = logging.getLogger("bq_mcp")
             logger.propagate = False
             logger.addHandler(file_handler)
     logger.info("Logger initialized.")

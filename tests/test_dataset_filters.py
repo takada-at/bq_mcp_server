@@ -1,6 +1,6 @@
 """Test dataset filtering functionality"""
 
-from bq_meta_api.repositories.config import should_include_dataset
+from bq_mcp.repositories.config import should_include_dataset
 
 
 class TestDatasetFiltering:
