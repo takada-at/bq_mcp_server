@@ -14,7 +14,7 @@ from bq_mcp.repositories import log
 
 
 class QueryExecutor:
-    """BigQueryクエリの安全な実行を管理するクラス"""
+    """Class for managing safe execution of BigQuery queries"""
 
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -22,7 +22,7 @@ class QueryExecutor:
         self.client = None
 
     def _get_client(self, project_id: Optional[str] = None) -> bigquery.Client:
-        """BigQueryクライアントを取得する"""
+        """Get BigQuery client"""
         if self.client is None:
             if self.settings.gcp_service_account_key_path:
                 self.client = bigquery.Client.from_service_account_json(
@@ -37,20 +37,20 @@ class QueryExecutor:
 
     def _validate_and_prepare_query(self, sql: str) -> str:
         """
-        クエリの安全性チェックとLIMIT句の追加・修正を行う
+        Perform query safety checks and add/modify LIMIT clause
 
         Args:
-            sql: 実行するSQLクエリ
+            sql: SQL query to execute
 
         Returns:
-            修正されたSQLクエリ
+            Modified SQL query
         """
-        # クエリの安全性チェック
+        # Query safety check
         is_safe, error_msg = QueryParser.is_safe_query(sql)
         if not is_safe:
             raise HTTPException(status_code=400, detail=error_msg)
 
-        # LIMIT句の追加・修正
+        # Add/modify LIMIT clause
         modified_sql = QueryParser.add_or_modify_limit(
             sql, self.settings.default_query_limit
         )
@@ -60,40 +60,40 @@ class QueryExecutor:
         self, sql: str, project_id: Optional[str] = None
     ) -> QueryDryRunResult:
         """
-        クエリのスキャン量をドライランでチェックする
+        Check query scan amount with dry run
 
         Args:
-            sql: 実行するSQLクエリ（既に準備済み）
-            project_id: 実行対象のプロジェクトID
+            sql: SQL query to execute (already prepared)
+            project_id: Target project ID for execution
 
         Returns:
-            ドライラン結果
+            Dry run result
         """
-        self.logger.info(f"スキャン量チェック開始: {sql[:100]}...")
+        self.logger.info(f"Starting scan amount check: {sql[:100]}...")
 
         try:
             client = self._get_client(project_id)
 
-            # ドライラン用の設定
+            # Configuration for dry run
             job_config = QueryJobConfig(
                 dry_run=True,
                 use_query_cache=False,
             )
 
-            # ドライランクエリを実行
+            # Execute dry run query
             query_job = client.query(sql, job_config=job_config)
 
-            # 結果を取得
+            # Get results
             total_bytes_processed = query_job.total_bytes_processed or 0
             total_bytes_billed = query_job.total_bytes_billed or 0
 
-            # 安全性の判定
+            # Safety assessment
             is_safe_to_run = total_bytes_processed <= self.settings.max_scan_bytes
 
             self.logger.info(
-                f"スキャン量チェック完了 - 処理予定バイト数: {total_bytes_processed:,}, "
-                f"課金予定バイト数: {total_bytes_billed:,}, "
-                f"安全: {is_safe_to_run}"
+                f"Scan amount check completed - Expected processed bytes: {total_bytes_processed:,}, "
+                f"Expected billed bytes: {total_bytes_billed:,}, "
+                f"Safe: {is_safe_to_run}"
             )
 
             return QueryDryRunResult(
@@ -104,41 +104,41 @@ class QueryExecutor:
             )
 
         except Exception as e:
-            self.logger.error(f"スキャン量チェックエラー: {e}")
+            self.logger.error(f"Scan amount check error: {e}")
             raise HTTPException(
                 status_code=500,
-                detail=f"スキャン量チェック中にエラーが発生しました: {str(e)}",
+                detail=f"Error occurred during scan amount check: {str(e)}",
             )
 
     async def execute_query(
         self, sql: str, project_id: Optional[str] = None, force_execute: bool = False
     ) -> QueryExecutionResult:
         """
-        クエリを安全に実行する
+        Execute query safely
 
         Args:
-            sql: 実行するSQLクエリ
-            project_id: 実行対象のプロジェクトID
-            force_execute: ドライランチェックをスキップして強制実行するか
+            sql: SQL query to execute
+            project_id: Target project ID for execution
+            force_execute: Whether to skip dry run check and force execution
 
         Returns:
-            クエリ実行結果
+            Query execution result
         """
         start_time = time.time()
-        self.logger.info(f"クエリ実行開始: {sql[:100]}...")
+        self.logger.info(f"Starting query execution: {sql[:100]}...")
 
         try:
-            # クエリの準備（安全性チェック + LIMIT句修正）
+            # Query preparation (safety check + LIMIT clause modification)
             modified_sql = self._validate_and_prepare_query(sql)
 
-            # ドライランチェック（force_executeがFalseの場合のみ）
+            # Dry run check (only when force_execute is False)
             if not force_execute:
                 dry_run_result = await self.check_scan_amount(modified_sql, project_id)
                 if not dry_run_result.is_safe:
                     return QueryExecutionResult(
                         success=False,
                         error_message=(
-                            f"Query scan amount exceeds limit."
+                            f"Query scan amount exceeds limit. "
                             f"Expected scan amount: {dry_run_result.total_bytes_processed:,} bytes, "
                             f"Limit: {self.settings.max_scan_bytes:,} bytes"
                         ),
@@ -146,23 +146,23 @@ class QueryExecutor:
 
             client = self._get_client(project_id)
 
-            # クエリ実行用の設定
+            # Configuration for query execution
             job_config = QueryJobConfig(
                 use_query_cache=True,
             )
 
-            # クエリを実行
+            # Execute query
             query_job = client.query(modified_sql, job_config=job_config)
             results = query_job.result(
                 timeout=self.settings.query_timeout_seconds
-            )  # 完了を待機
+            )  # Wait for completion
 
-            # 結果をリストに変換
+            # Convert results to list
             rows = []
             for row in results:
                 row_dict = {}
                 for key, value in row.items():
-                    # BigQueryの特殊な型を処理
+                    # Handle BigQuery special types
                     if hasattr(value, "isoformat"):  # datetime objects
                         row_dict[key] = value.isoformat()
                     elif isinstance(value, (bytes, bytearray)):
@@ -174,9 +174,9 @@ class QueryExecutor:
             execution_time_ms = int((time.time() - start_time) * 1000)
 
             self.logger.info(
-                f"クエリ実行完了 - 行数: {len(rows)}, "
-                f"実行時間: {execution_time_ms}ms, "
-                f"処理バイト数: {query_job.total_bytes_processed or 0:,}"
+                f"Query execution completed - Rows: {len(rows)}, "
+                f"Execution time: {execution_time_ms}ms, "
+                f"Processed bytes: {query_job.total_bytes_processed or 0:,}"
             )
 
             return QueryExecutionResult(
@@ -190,13 +190,13 @@ class QueryExecutor:
             )
 
         except HTTPException as http_exc:
-            self.logger.error(f"HTTPエラー: {http_exc.detail}")
+            self.logger.error(f"HTTP error: {http_exc.detail}")
             raise http_exc
         except Exception as e:
             execution_time_ms = int((time.time() - start_time) * 1000)
             error_msg = str(e)
 
-            self.logger.error(f"クエリ実行エラー: {error_msg}")
+            self.logger.error(f"Query execution error: {error_msg}")
 
             return QueryExecutionResult(
                 success=False,
@@ -205,7 +205,7 @@ class QueryExecutor:
             )
 
     def format_bytes(self, bytes_count: int) -> str:
-        """バイト数を人間が読みやすい形式にフォーマットする"""
+        """Format byte count into human-readable format"""
         for unit in ["B", "KB", "MB", "GB", "TB"]:
             if bytes_count < 1024.0:
                 return f"{bytes_count:.1f} {unit}"

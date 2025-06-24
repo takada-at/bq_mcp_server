@@ -13,7 +13,7 @@ from bq_mcp.core.entities import (
 
 @pytest.fixture
 def test_timestamp():
-    """テスト用のタイムスタンプを提供するフィクスチャ"""
+    """Fixture that provides timestamp for testing"""
     return datetime.datetime.now(datetime.timezone.utc)
 
 
@@ -127,8 +127,8 @@ def test_cached_data(test_timestamp):
 @pytest.mark.asyncio
 @patch("bq_mcp.repositories.cache_manager.get_cached_data")
 async def test_search_metadata_no_cache(mock_get_cached_data):
-    """キャッシュデータがない場合は空のリストを返す"""
-    # キャッシュデータがない状態をモック
+    """Returns empty list when there is no cache data"""
+    # Mock state with no cache data
     mock_get_cached_data.return_value = None
 
     # Execute search
@@ -142,14 +142,14 @@ async def test_search_metadata_no_cache(mock_get_cached_data):
 @pytest.mark.asyncio
 @patch("bq_mcp.repositories.cache_manager.get_cached_data")
 async def test_search_metadata_dataset_name(mock_get_cached_data, test_cached_data):
-    """データセット名でキーワードマッチする場合のテスト"""
+    """Test case for keyword matching in dataset name"""
     # Mock cache data
     mock_get_cached_data.return_value = test_cached_data
 
     # Execute search
     results = await search_metadata("user")
 
-    # Verify results - データセット名マッチが含まれているか
+    # Verify results - check if dataset name match is included
     dataset_results = [
         r for r in results if r.type == "dataset" and r.match_location == "name"
     ]
@@ -185,7 +185,7 @@ async def test_search_metadata_table_name(mock_get_cached_data, test_cached_data
     # Execute search
     results = await search_metadata("user")
 
-    # Verify results - テーブル名マッチが含まれているか
+    # Verify results - check if table name match is included
     table_results = [
         r for r in results if r.type == "table" and r.match_location == "name"
     ]
@@ -214,14 +214,14 @@ async def test_search_metadata_table_description(
 @pytest.mark.asyncio
 @patch("bq_mcp.repositories.cache_manager.get_cached_data")
 async def test_search_metadata_column_name(mock_get_cached_data, test_cached_data):
-    """カラム名でキーワードマッチする場合のテスト"""
+    """Test case for keyword matching in column name"""
     # Mock cache data
     mock_get_cached_data.return_value = test_cached_data
 
     # Execute search
     results = await search_metadata("user_id")
 
-    # Verify results - カラム名マッチが含まれているか
+    # Verify results - check if column name match is included
     column_results = [
         r for r in results if r.type == "column" and r.match_location == "name"
     ]
