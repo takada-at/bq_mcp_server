@@ -57,6 +57,25 @@ Required environment variables:
 
 - `PROJECT_IDS` - A comma-separated list of GCP project IDs
 
+## MCP Setting
+
+```json
+{
+  "sqlite-explorer": {
+    "command": "uv",
+    "args": [
+      "run",
+      "--directory",
+      "<your install directory>",
+      "mcp_server"
+    ],
+    "env": {
+      "PROJECT_IDS": "<your gcp project ids>"
+    }
+  }
+}
+```
+
 ## Running Tests
 
 ### Running All Tests

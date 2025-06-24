@@ -57,6 +57,25 @@ cp .env.example .env
 
 - `PROJECT_IDS` - GCPプロジェクトIDをカンマ区切りで列挙したリスト
 
+## MCP設定
+
+```json
+{
+  "sqlite-explorer": {
+    "command": "uv",
+    "args": [
+      "run",
+      "--directory",
+      "<your install directory>",
+      "mcp_server"
+    ],
+    "env": {
+      "PROJECT_IDS": "<your gcp project ids>"
+    }
+  }
+}
+```
+
 ## テスト実行
 
 ### 全テストの実行
