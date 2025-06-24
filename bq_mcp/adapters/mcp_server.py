@@ -34,7 +34,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[ApplicationContext]:
 
 
 mcp = FastMCP(
-    "BigQuery Metadata API",
+    "BigQuery MCP",
     description="Provides access to BigQuery dataset, table, and schema information, and allows safe query execution.",
     instructions="""Use search_metadata to search for metadata.
 Use get_datasets to retrieve a list of datasets and get_tables to retrieve a list of tables.
@@ -109,4 +109,4 @@ def main():
 
 
 if __name__ == "__main__":
-    mcp.run()
+    main()

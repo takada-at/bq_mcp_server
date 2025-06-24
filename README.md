@@ -80,7 +80,7 @@ pytest -k test_function_name
 ### テストカバレッジを確認
 
 ```bash
-pytest --cov=bq_meta_api
+pytest --cov=bq_mcp
 ```
 
 ## ローカル開発
