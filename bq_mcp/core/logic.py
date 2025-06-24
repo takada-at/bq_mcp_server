@@ -1,8 +1,8 @@
 from fastapi import HTTPException
 from typing import List, Optional
 import traceback
-from bq_meta_api.repositories import config
-from bq_meta_api.core.entities import (
+from bq_mcp.repositories import config
+from bq_mcp.core.entities import (
     CachedData,
     DatasetListResponse,
     DatasetMetadata,
@@ -10,8 +10,8 @@ from bq_meta_api.core.entities import (
     QueryExecutionResult,
     QueryDryRunResult,
 )
-from bq_meta_api.repositories import cache_manager, log
-from bq_meta_api.repositories.query_executor import QueryExecutor
+from bq_mcp.repositories import cache_manager, log
+from bq_mcp.repositories.query_executor import QueryExecutor
 
 
 # --- ヘルパー関数 ---

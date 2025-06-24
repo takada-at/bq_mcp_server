@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 from pathlib import Path
 from typing import List
 
-from bq_meta_api.core.entities import Settings
-from bq_meta_api.repositories import log
+from bq_mcp.core.entities import Settings
+from bq_mcp.repositories import log
 
 
 # .env ファイルを読み込む

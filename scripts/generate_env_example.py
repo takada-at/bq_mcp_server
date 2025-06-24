@@ -9,7 +9,7 @@ Generate .env.example from Settings class
 from pathlib import Path
 from typing import List, Tuple, Any
 
-from bq_meta_api.core.entities import Settings
+from bq_mcp.core.entities import Settings
 from pydantic.fields import FieldInfo
 
 

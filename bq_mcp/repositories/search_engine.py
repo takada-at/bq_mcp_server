@@ -1,12 +1,12 @@
 # search_engine.py: Provides search functionality over cached metadata
 from typing import List, Optional
-from bq_meta_api.repositories import log
-from bq_meta_api.core.entities import (
+from bq_mcp.repositories import log
+from bq_mcp.core.entities import (
     CachedData,
     SearchResultItem,
     ColumnSchema,
 )
-from bq_meta_api.repositories import cache_manager
+from bq_mcp.repositories import cache_manager
 
 
 def _search_columns(

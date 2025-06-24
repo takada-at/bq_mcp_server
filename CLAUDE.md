@@ -29,13 +29,13 @@ This is a BigQuery metadata API server that provides access to BigQuery dataset,
 
 ### Core Components
 
-**Domain Layer (`bq_meta_api/core/`)**:
+**Domain Layer (`bq_mcp/core/`)**:
 - `entities.py` - Pydantic models for data structures (DatasetMetadata, TableMetadata, CachedData, QueryExecutionRequest, etc.)
 - `logic.py` - Business logic for retrieving datasets and tables with caching
 - `converter.py` - Converts data structures to markdown format for API responses
 - `query_parser.py` - SQL query parsing and LIMIT clause manipulation with safety checks
 
-**Repository Layer (`bq_meta_api/repositories/`)**:
+**Repository Layer (`bq_mcp/repositories/`)**:
 - `bigquery_client.py` - Google Cloud BigQuery API client wrapper
 - `cache_manager.py` - Manages local caching of BigQuery metadata with TTL
 - `search_engine.py` - Full-text search functionality across cached metadata
@@ -43,7 +43,7 @@ This is a BigQuery metadata API server that provides access to BigQuery dataset,
 - `config.py` - Application configuration management (environment variables, project IDs)
 - `log.py` - Centralized logging configuration
 
-**Adapter Layer (`bq_meta_api/adapters/`)**:
+**Adapter Layer (`bq_mcp/adapters/`)**:
 - `mcp_server.py` - MCP server implementation with tools: `get_datasets`, `get_tables`, `search_metadata`, `execute_query`
 - `web.py` - FastAPI REST endpoints including `/query/execute`
 - `bq_agent_gradio.py` - Gradio web interface
@@ -81,4 +81,4 @@ The MCP server (`mcp_server.py`) is the primary interface, providing four main t
 - `DEFAULT_QUERY_LIMIT` - Default LIMIT value added to queries (default: 10)
 - `QUERY_TIMEOUT_SECONDS` - Query execution timeout (default: 300 seconds)
 
-Run the MCP server with: `python -m bq_meta_api.adapters.mcp_server`
+Run the MCP server with: `python -m bq_mcp.adapters.mcp_server`

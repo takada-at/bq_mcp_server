@@ -1,12 +1,21 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "gcloud-aio-bigquery>=7.1.0",
+#     "google-cloud-bigquery>=3.31.0",
+#     "pydantic>=2.11.3",
+#     "python-dotenv>=1.1.0",
+# ]
+# ///
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 from mcp.server.fastmcp import FastMCP
 from typing import Optional
 
 
-from bq_meta_api.core import converter, logic
-from bq_meta_api.core.entities import ApplicationContext
-from bq_meta_api.repositories import cache_manager, config, log, search_engine
+from bq_mcp.core import converter, logic
+from bq_mcp.core.entities import ApplicationContext
+from bq_mcp.repositories import cache_manager, config, log, search_engine
 
 
 @asynccontextmanager
@@ -25,7 +34,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[ApplicationContext]:
 
 
 mcp = FastMCP(
-    "BigQuery Metadata API",
+    "BigQuery MCP",
     description="Provides access to BigQuery dataset, table, and schema information, and allows safe query execution.",
     instructions="""Use search_metadata to search for metadata.
 Use get_datasets to retrieve a list of datasets and get_tables to retrieve a list of tables.
@@ -92,5 +101,12 @@ async def execute_query(sql: str, project_id: Optional[str] = None):
     return converter.convert_query_result_to_markdown(result, project_id)
 
 
-if __name__ == "__main__":
+def main():
+    """
+    Main entry point to run the MCP server.
+    """
     mcp.run()
+
+
+if __name__ == "__main__":
+    main()

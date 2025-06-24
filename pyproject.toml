@@ -1,5 +1,5 @@
 [project]
-name = "bigquery-ai"
+name = "bq_mcp"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -23,12 +23,19 @@ dev = [
     "ruff>=0.11.7",
 ]
 
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+mcp_server = "bq_mcp.adapters.mcp_server:main"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=bq_meta_api --cov-report=term-missing --cov-report=html"
+addopts = "--cov=bq_mcp --cov-report=term-missing --cov-report=html"
 
 [tool.coverage.run]
-source = ["bq_meta_api"]
+source = ["bq_mcp"]
 omit = [
     "*/tests/*",
     "*/__pycache__/*",
