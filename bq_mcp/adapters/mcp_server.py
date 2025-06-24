@@ -1,3 +1,12 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "gcloud-aio-bigquery>=7.1.0",
+#     "google-cloud-bigquery>=3.31.0",
+#     "pydantic>=2.11.3",
+#     "python-dotenv>=1.1.0",
+# ]
+# ///
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 from mcp.server.fastmcp import FastMCP
@@ -90,6 +99,13 @@ async def execute_query(sql: str, project_id: Optional[str] = None):
     # フォース実行フラグは絶対にFalseにする。MCPでは抜け道できないようにする。
     result = await logic.execute_query(sql, project_id, force=False)
     return converter.convert_query_result_to_markdown(result, project_id)
+
+
+def main():
+    """
+    Main entry point to run the MCP server.
+    """
+    mcp.run()
 
 
 if __name__ == "__main__":
