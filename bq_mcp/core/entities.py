@@ -116,6 +116,7 @@ class QueryDryRunResult(BaseModel):
     total_bytes_billed: int = Field(..., description="Expected bytes to be billed")
     is_safe: bool = Field(..., description="Whether the query can be executed safely")
     modified_sql: str = Field(..., description="SQL with modified LIMIT clause")
+    error_message: Optional[str] = Field(None, description="Error message")
 
 
 class QueryExecutionResult(BaseModel):

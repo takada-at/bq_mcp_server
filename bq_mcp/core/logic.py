@@ -165,6 +165,7 @@ async def execute_query(
 
         return result
     except Exception as e:
+        # SQL errors are returned as responses in the above flow, so there's no need to include error messages in exceptions for this transition.
         logger.error(f"Error occurred during query execution: {e}")
         raise HTTPException(
             status_code=500,

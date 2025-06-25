@@ -105,10 +105,14 @@ class QueryExecutor:
             )
 
         except Exception as e:
-            self.logger.error(f"Scan amount check error: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Error occurred during scan amount check: {str(e)}",
+            error_msg = str(e)
+            self.logger.error(f"Scan amount check error: {error_msg}")
+            return QueryDryRunResult(
+                total_bytes_processed=0,
+                total_bytes_billed=0,
+                is_safe=False,
+                modified_sql=sql,
+                error_message=error_msg,
             )
 
     async def execute_query(
