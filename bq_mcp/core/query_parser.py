@@ -3,7 +3,7 @@ SQL query parser for LIMIT clause detection and modification
 """
 
 import re
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 
 class QueryParser:

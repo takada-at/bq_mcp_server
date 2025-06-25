@@ -1,18 +1,19 @@
 # bigquery_client.py: Handles communication with Google BigQuery API
-import aiohttp
 from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any, Callable, Awaitable
-from gcloud.aio.bigquery import Dataset, Table
+from typing import Any, Awaitable, Callable, Dict, List, Optional
+
+import aiohttp
 from gcloud.aio.auth.token import Token
+from gcloud.aio.bigquery import Dataset, Table
 from google.auth.exceptions import DefaultCredentialsError, RefreshError
-from bq_mcp.repositories import config
+
 from bq_mcp.core.entities import (
+    ColumnSchema,
     DatasetMetadata,
     TableMetadata,
     TableSchema,
-    ColumnSchema,
 )
-from bq_mcp.repositories import log
+from bq_mcp.repositories import config, log
 
 
 def get_bigquery_client() -> Optional[Dataset]:

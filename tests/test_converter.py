@@ -1,5 +1,5 @@
 from bq_mcp.core import converter
-from bq_mcp.core.entities import TableMetadata, TableSchema, ColumnSchema
+from bq_mcp.core.entities import ColumnSchema, TableMetadata, TableSchema
 
 
 def test_convert_tables_to_markdown_empty_list():

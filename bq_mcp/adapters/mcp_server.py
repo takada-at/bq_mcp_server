@@ -8,11 +8,11 @@
 #     "mcp[cli]>=1.6.0",
 # ]
 # ///
-from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
-from mcp.server.fastmcp import FastMCP
+from contextlib import asynccontextmanager
 from typing import Optional
 
+from mcp.server.fastmcp import FastMCP
 
 from bq_mcp.core import converter, logic
 from bq_mcp.core.entities import ApplicationContext

@@ -1,16 +1,17 @@
-from fastapi import HTTPException
-from typing import List, Optional
 import traceback
-from bq_mcp.repositories import config
+from typing import List, Optional
+
+from fastapi import HTTPException
+
 from bq_mcp.core.entities import (
     CachedData,
     DatasetListResponse,
     DatasetMetadata,
-    TableMetadata,
-    QueryExecutionResult,
     QueryDryRunResult,
+    QueryExecutionResult,
+    TableMetadata,
 )
-from bq_mcp.repositories import cache_manager, log
+from bq_mcp.repositories import cache_manager, config, log
 from bq_mcp.repositories.query_executor import QueryExecutor
 
 
@@ -124,24 +125,11 @@ async def check_query_scan_amount(
     logger = log.get_logger()
     settings = config.get_settings()
 
-    try:
-        query_executor = QueryExecutor(settings)
-        result = await query_executor.check_scan_amount(sql, project_id)
+    query_executor = QueryExecutor(settings)
+    result = await query_executor.check_scan_amount(sql, project_id)
 
-        logger.info(
-            f"Scan amount check completed: {result.total_bytes_processed:,} bytes"
-        )
-        return result
-
-    except HTTPException as http_exc:
-        logger.error(f"HTTP error in scan amount check: {http_exc.detail}")
-        raise http_exc
-    except Exception as e:
-        logger.error(f"Error occurred during scan amount check: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error occurred during scan amount check: {str(e)}",
-        )
+    logger.info(f"Scan amount check completed: {result.total_bytes_processed:,} bytes")
+    return result
 
 
 async def execute_query(
@@ -152,22 +140,12 @@ async def execute_query(
     logger = log.get_logger()
     settings = config.get_settings()
 
-    try:
-        query_executor = QueryExecutor(settings)
-        result = await query_executor.execute_query(
-            sql, project_id, force_execute=force
-        )
+    query_executor = QueryExecutor(settings)
+    result = await query_executor.execute_query(sql, project_id, force_execute=force)
 
-        if result.success:
-            logger.info(
-                f"Query execution successful - result rows: {result.total_rows}"
-            )
-        else:
-            logger.warning(f"Query execution failed: {result.error_message}")
+    if result.success:
+        logger.info(f"Query execution successful - result rows: {result.total_rows}")
+    else:
+        logger.warning(f"Query execution failed: {result.error_message}")
 
-        return result
-    except Exception as e:
-        logger.error(f"Error occurred during query execution: {e}")
-        raise HTTPException(
-            status_code=500, detail="Internal error occurred during query execution."
-        )
+    return result

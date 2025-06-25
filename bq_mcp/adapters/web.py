@@ -1,8 +1,10 @@
 # main.py: FastAPI application entry point
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Query, Path as FastApiPath
+from typing import List, Literal, Optional
+
+from fastapi import FastAPI, HTTPException, Query
+from fastapi import Path as FastApiPath
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
-from typing import List, Optional, Literal
 
 from bq_mcp.core import converter, logic
 from bq_mcp.core.entities import (

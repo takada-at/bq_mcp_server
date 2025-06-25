@@ -4,9 +4,10 @@ BigQuery query execution with cost control and safety measures
 
 import time
 from typing import Optional
+
+from fastapi import HTTPException
 from google.cloud import bigquery
 from google.cloud.bigquery import QueryJobConfig
-from fastapi import HTTPException
 
 from bq_mcp.core.entities import QueryDryRunResult, QueryExecutionResult, Settings
 from bq_mcp.core.query_parser import QueryParser
@@ -104,10 +105,14 @@ class QueryExecutor:
             )
 
         except Exception as e:
-            self.logger.error(f"Scan amount check error: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Error occurred during scan amount check: {str(e)}",
+            error_msg = str(e)
+            self.logger.error(f"Scan amount check error: {error_msg}")
+            return QueryDryRunResult(
+                total_bytes_processed=0,
+                total_bytes_billed=0,
+                is_safe=False,
+                modified_sql=sql,
+                error_message=error_msg,
             )
 
     async def execute_query(
@@ -189,9 +194,6 @@ class QueryExecutor:
                 job_id=query_job.job_id,
             )
 
-        except HTTPException as http_exc:
-            self.logger.error(f"HTTP error: {http_exc.detail}")
-            raise http_exc
         except Exception as e:
             execution_time_ms = int((time.time() - start_time) * 1000)
             error_msg = str(e)

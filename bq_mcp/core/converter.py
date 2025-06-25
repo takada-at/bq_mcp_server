@@ -1,12 +1,13 @@
 # converter.py: Converts BigQuery metadata to various formats
 from typing import List
+
 from bq_mcp.core.entities import (
-    DatasetMetadata,
-    TableMetadata,
     ColumnSchema,
-    SearchResultItem,
-    QueryExecutionResult,
+    DatasetMetadata,
     QueryDryRunResult,
+    QueryExecutionResult,
+    SearchResultItem,
+    TableMetadata,
 )
 
 
@@ -274,10 +275,35 @@ def convert_dry_run_result_to_markdown(
     scan_size = format_bytes(result.total_bytes_processed or 0)
     bill_size = format_bytes(result.total_bytes_billed or 0)
 
-    status_icon = "✅" if result.is_safe else "⚠️"
-    status_text = "Safe" if result.is_safe else "Caution Required"
+    if result.error_message:
+        status_icon = "❌"
+        status_text = "Fail"
+    elif not result.is_safe:
+        status_icon = "⚠️"
+        status_text = "Caution Required"
+    else:
+        status_icon = "✅"
+        status_text = "Safe"
 
-    markdown_content = f"""# BigQuery Query Scan Amount Check Result
+    if result.error_message:
+        return f"""# BigQuery Query Scan Amount Check Result
+
+## Query Information
+- **Status**: ❌ Failed
+- **Project ID**: {project_id or "Default"}
+
+## Error Details
+```
+{result.error_message or "Unknown error"}
+```
+
+## Recommendations
+- Check SQL syntax
+- Verify that table and column names exist
+- Ensure you have proper permissions
+- Test with a smaller dataset first"""
+    else:
+        markdown_content = f"""# BigQuery Query Scan Amount Check Result
 
 ## Check Information
 - **Status**: {status_icon} {status_text}
