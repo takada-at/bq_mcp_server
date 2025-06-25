@@ -1,16 +1,17 @@
-from fastapi import HTTPException
-from typing import List, Optional
 import traceback
-from bq_mcp.repositories import config
+from typing import List, Optional
+
+from fastapi import HTTPException
+
 from bq_mcp.core.entities import (
     CachedData,
     DatasetListResponse,
     DatasetMetadata,
-    TableMetadata,
-    QueryExecutionResult,
     QueryDryRunResult,
+    QueryExecutionResult,
+    TableMetadata,
 )
-from bq_mcp.repositories import cache_manager, log
+from bq_mcp.repositories import cache_manager, config, log
 from bq_mcp.repositories.query_executor import QueryExecutor
 
 
@@ -133,9 +134,6 @@ async def check_query_scan_amount(
         )
         return result
 
-    except HTTPException as http_exc:
-        logger.error(f"HTTP error in scan amount check: {http_exc.detail}")
-        raise http_exc
     except Exception as e:
         logger.error(f"Error occurred during scan amount check: {e}")
         raise HTTPException(
@@ -169,5 +167,6 @@ async def execute_query(
     except Exception as e:
         logger.error(f"Error occurred during query execution: {e}")
         raise HTTPException(
-            status_code=500, detail="Internal error occurred during query execution."
+            status_code=500,
+            detail=f"Internal error occurred during query execution. : {e}",
         )

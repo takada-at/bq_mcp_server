@@ -1,14 +1,16 @@
 {
-  "mcpServers": {
-    "bq_mcp": {
-      "command": "uv",
-      "args": [
-        "run",
-        "mcp_server",
-      ],
-      "env": {
-        "PYTHONPATH": "directory"
-      }
+    "mcpServers": {
+        "bq_mcp": {
+            "command": "uv",
+            "args": [
+                "run",
+                "--directory",
+                "<your install directory>",
+                "mcp_server"
+            ],
+            "env": {
+                "PYTHONPATH": "<your install directory>"
+            }
+        }
     }
-  }
 }

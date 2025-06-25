@@ -1,13 +1,13 @@
 # config.py: Manages application configuration settings
-import os
 import fnmatch
-from dotenv import load_dotenv
+import os
 from pathlib import Path
 from typing import List
 
+from dotenv import load_dotenv
+
 from bq_mcp.core.entities import Settings
 from bq_mcp.repositories import log
-
 
 # Load .env file
 root = Path(__file__).parent.parent.parent.resolve()

@@ -1,9 +1,7 @@
-from pathlib import Path
 import logging
-
+from pathlib import Path
 
 from bq_mcp.core.entities import LogSetting
-
 
 logger = None
 

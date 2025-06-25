@@ -2,11 +2,13 @@
 Tests for BigQuery query executor functionality
 """
 
-import pytest
 from unittest.mock import Mock, patch
-from bq_mcp.repositories.query_executor import QueryExecutor
-from bq_mcp.core.entities import Settings, QueryDryRunResult, QueryExecutionResult
+
+import pytest
 from fastapi import HTTPException
+
+from bq_mcp.core.entities import QueryDryRunResult, QueryExecutionResult, Settings
+from bq_mcp.repositories.query_executor import QueryExecutor
 
 
 @pytest.fixture

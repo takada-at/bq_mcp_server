@@ -1,8 +1,9 @@
 # models.py: Defines Pydantic models for data structures and API responses
-from dataclasses import dataclass
-from typing import List, Optional, Dict
-from pydantic import BaseModel, Field
 import datetime
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class LogSetting(BaseModel):

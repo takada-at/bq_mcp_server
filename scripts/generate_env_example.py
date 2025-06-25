@@ -8,10 +8,11 @@ a .env.example file.
 """
 
 from pathlib import Path
-from typing import List, Tuple, Any
+from typing import Any, List, Tuple
+
+from pydantic.fields import FieldInfo
 
 from bq_mcp.core.entities import Settings
-from pydantic.fields import FieldInfo
 
 
 def extract_env_variables_from_settings() -> List[Tuple[str, Any, str]]:

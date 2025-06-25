@@ -1,14 +1,13 @@
 # cache_manager.py: Manages local caching of BigQuery metadata
 import asyncio
-import json
 import datetime
+import json
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple
-from bq_mcp.repositories import config
-from bq_mcp.core.entities import CachedData, DatasetMetadata, TableMetadata
-from bq_mcp.repositories import bigquery_client, log
-from bq_mcp.repositories.config import should_include_dataset
+from typing import Dict, List, Optional, Tuple
 
+from bq_mcp.core.entities import CachedData, DatasetMetadata, TableMetadata
+from bq_mcp.repositories import bigquery_client, config, log
+from bq_mcp.repositories.config import should_include_dataset
 
 # In-memory cache (singleton-like retention)
 _cache: Optional[CachedData] = None
