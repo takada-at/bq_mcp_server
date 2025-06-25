@@ -39,7 +39,7 @@ def extract_env_variables_from_settings() -> List[Tuple[str, Any, str]]:
             try:
                 default_value = field_info.default_factory()
                 # Convert empty containers to None for cleaner output
-                if default_value == [] or default_value == {} or default_value == set():
+                if default_value in ([], {}, set()):
                     default_value = None  # Will be shown as empty in .env.example
             except Exception:
                 # If default_factory fails, treat as having a default but don't show the value
