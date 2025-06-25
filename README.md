@@ -8,10 +8,9 @@ This is a Python-based MCP (Model Context Protocol) server that retrieves datase
 ## Key Features
 
 - **Metadata Management**: Retrieves and caches information about BigQuery datasets, tables, and columns
-- **Full-Text Search**: Supports keyword search of cached metadata
+- **Keyword Search**: Supports keyword search of cached metadata
 - **Secure Query Execution**: Provides SQL execution capabilities with automatic LIMIT clause insertion and cost control
 - **MCP Compliance**: Offers tools via the Model Context Protocol
-- **REST API**: Includes a web endpoint built with FastAPI
 
 ## MCP Server Tools
 
@@ -58,18 +57,20 @@ Required environment variables:
 
 ```json
 {
-  "sqlite-explorer": {
-    "command": "uv",
-    "args": [
-      "run",
-      "--directory",
-      "<your install directory>",
-      "mcp_server"
-    ],
-    "env": {
-      "PROJECT_IDS": "<your gcp project ids>"
+    "mcpServers": {
+        "bq_mcp": {
+            "command": "uv",
+            "args": [
+                "run",
+                "--directory",
+                "<your install directory>",
+                "mcp_server"
+            ],
+            "env": {
+                "PYTHONPATH": "<your install directory>"
+            }
+        }
     }
-  }
 }
 ```
 

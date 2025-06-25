@@ -8,10 +8,9 @@ Google Cloud BigQueryのデータセット、テーブル、スキーマ情報�
 ## 主な機能
 
 - **メタデータ管理**: BigQueryのデータセット、テーブル、カラム情報の取得とキャッシュ
-- **全文検索**: キャッシュされたメタデータに対するキーワード検索
+- **キーワード検索**: キャッシュされたメタデータに対するキーワード検索
 - **安全なクエリ実行**: 自動的なLIMIT句の付与とコスト制御を備えたSQL実行機能
 - **MCP対応**: Model Context Protocol経由でのツール提供
-- **REST API**: FastAPIベースのWebエンドポイント
 
 ## MCPサーバー
 
@@ -58,18 +57,20 @@ cp .env.example .env
 
 ```json
 {
-  "sqlite-explorer": {
-    "command": "uv",
-    "args": [
-      "run",
-      "--directory",
-      "<your install directory>",
-      "mcp_server"
-    ],
-    "env": {
-      "PROJECT_IDS": "<your gcp project ids>"
+    "mcpServers": {
+        "bq_mcp": {
+            "command": "uv",
+            "args": [
+                "run",
+                "--directory",
+                "<your install directory>",
+                "mcp_server"
+            ],
+            "env": {
+                "PYTHONPATH": "<your install directory>"
+            }
+        }
     }
-  }
 }
 ```
 
