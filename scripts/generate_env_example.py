@@ -31,6 +31,19 @@ def extract_env_variables_from_settings() -> List[Tuple[str, Any, str]]:
             # Handle PydanticUndefined appropriately
             if str(field_info.default) != "PydanticUndefined":
                 default_value = field_info.default
+        elif (
+            hasattr(field_info, "default_factory")
+            and field_info.default_factory is not None
+        ):
+            # Handle default_factory by calling it to get the actual default
+            try:
+                default_value = field_info.default_factory()
+                # Convert empty containers to None for cleaner output
+                if default_value in ([], {}, set()):
+                    default_value = None  # Will be shown as empty in .env.example
+            except Exception:
+                # If default_factory fails, treat as having a default but don't show the value
+                default_value = None
 
         # Get field type information
         field_type = (
@@ -59,9 +72,15 @@ def generate_comment_for_field(
     # Check if field is Optional[T] type
     import typing
 
-    is_optional = (
+    # Check if field has default value or default_factory
+    has_default = (
         default_value is not None and str(default_value) != "PydanticUndefined"
     ) or (
+        hasattr(field_info, "default_factory")
+        and field_info.default_factory is not None
+    )
+
+    is_optional = has_default or (
         hasattr(field_type, "__origin__")
         and field_type.__origin__ is typing.Union
         and type(None) in field_type.__args__

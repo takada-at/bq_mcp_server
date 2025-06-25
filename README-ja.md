@@ -114,12 +114,6 @@ python -m bq_meta_api.adapters.mcp_server
 python -m bq_meta_api.adapters.web
 ```
 
-### Gradio Webインターフェースの起動
-
-```bash
-python -m bq_meta_api.adapters.bq_agent_gradio
-```
-
 ### 開発用コマンド
 
 #### コードフォーマットとリンティング
