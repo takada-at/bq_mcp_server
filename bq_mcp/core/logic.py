@@ -168,5 +168,5 @@ async def execute_query(
         logger.error(f"Error occurred during query execution: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"Internal error occurred during query execution. : {e}",
+            detail="Internal error occurred during query execution.",
         )
