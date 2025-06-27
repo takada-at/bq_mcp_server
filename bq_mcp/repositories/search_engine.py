@@ -9,6 +9,48 @@ from bq_mcp.core.entities import (
 from bq_mcp.repositories import cache_manager, log
 
 
+def _create_search_result(
+    item_type: str,
+    project_id: str,
+    dataset_id: str,
+    match_location: str,
+    table_id: Optional[str] = None,
+    column_name: Optional[str] = None,
+) -> SearchResultItem:
+    """Create a SearchResultItem with the specified parameters."""
+    return SearchResultItem(
+        type=item_type,
+        project_id=project_id,
+        dataset_id=dataset_id,
+        table_id=table_id,
+        column_name=column_name,
+        match_location=match_location,
+    )
+
+
+def _search_in_text_fields(
+    name: str,
+    description: Optional[str],
+    keyword: str,
+    create_result_func,
+    results: List[SearchResultItem],
+) -> None:
+    """Generic function to search in name and description fields."""
+    lower_keyword = keyword.lower()
+
+    # Search by name
+    if lower_keyword in name.lower():
+        result = create_result_func("name")
+        if not _is_duplicate_result(result, results):
+            results.append(result)
+
+    # Search by description
+    if description and lower_keyword in description.lower():
+        result = create_result_func("description")
+        if not _is_duplicate_result(result, results):
+            results.append(result)
+
+
 def _search_columns(
     columns: List[ColumnSchema],
     keyword: str,
@@ -18,40 +60,17 @@ def _search_columns(
 ) -> List[SearchResultItem]:
     """Recursively searches within the specified column list."""
     results: List[SearchResultItem] = []
-    lower_keyword = keyword.lower()
 
     for column in columns:
-        # Search by column name
-        if lower_keyword in column.name.lower():
-            results.append(
-                SearchResultItem(
-                    type="column",
-                    project_id=project_id,
-                    dataset_id=dataset_id,
-                    table_id=table_id,
-                    column_name=column.name,
-                    match_location="name",
-                )
+
+        def create_column_result(match_location: str) -> SearchResultItem:
+            return _create_search_result(
+                "column", project_id, dataset_id, match_location, table_id, column.name
             )
-        # Search by column description
-        if column.description and lower_keyword in column.description.lower():
-            # Check if same column name is not already added (avoid duplicates)
-            if not any(
-                r.type == "column"
-                and r.column_name == column.name
-                and r.match_location == "description"
-                for r in results
-            ):
-                results.append(
-                    SearchResultItem(
-                        type="column",
-                        project_id=project_id,
-                        dataset_id=dataset_id,
-                        table_id=table_id,
-                        column_name=column.name,
-                        match_location="description",
-                    )
-                )
+
+        _search_in_text_fields(
+            column.name, column.description, keyword, create_column_result, results
+        )
 
         # Recursively search nested fields
         if column.fields:
@@ -84,31 +103,22 @@ def _is_duplicate_result(
 def _search_datasets(cached_data: CachedData, keyword: str) -> List[SearchResultItem]:
     """Search datasets"""
     results = []
-    lower_keyword = keyword.lower()
 
     for project_id, datasets in cached_data.datasets.items():
         for dataset in datasets:
-            # Search by dataset ID
-            if lower_keyword in dataset.dataset_id.lower():
-                result = SearchResultItem(
-                    type="dataset",
-                    project_id=project_id,
-                    dataset_id=dataset.dataset_id,
-                    match_location="name",
-                )
-                if not _is_duplicate_result(result, results):
-                    results.append(result)
 
-            # Search by dataset description
-            if dataset.description and lower_keyword in dataset.description.lower():
-                result = SearchResultItem(
-                    type="dataset",
-                    project_id=project_id,
-                    dataset_id=dataset.dataset_id,
-                    match_location="description",
+            def create_dataset_result(match_location: str) -> SearchResultItem:
+                return _create_search_result(
+                    "dataset", project_id, dataset.dataset_id, match_location
                 )
-                if not _is_duplicate_result(result, results):
-                    results.append(result)
+
+            _search_in_text_fields(
+                dataset.dataset_id,
+                dataset.description,
+                keyword,
+                create_dataset_result,
+                results,
+            )
 
     return results
 
@@ -116,34 +126,23 @@ def _search_datasets(cached_data: CachedData, keyword: str) -> List[SearchResult
 def _search_tables(cached_data: CachedData, keyword: str) -> List[SearchResultItem]:
     """Search tables"""
     results = []
-    lower_keyword = keyword.lower()
 
     for project_id, datasets_tables in cached_data.tables.items():
         for dataset_id, tables in datasets_tables.items():
             for table in tables:
-                # Search by table ID
-                if lower_keyword in table.table_id.lower():
-                    result = SearchResultItem(
-                        type="table",
-                        project_id=project_id,
-                        dataset_id=dataset_id,
-                        table_id=table.table_id,
-                        match_location="name",
-                    )
-                    if not _is_duplicate_result(result, results):
-                        results.append(result)
 
-                # Search by table description
-                if table.description and lower_keyword in table.description.lower():
-                    result = SearchResultItem(
-                        type="table",
-                        project_id=project_id,
-                        dataset_id=dataset_id,
-                        table_id=table.table_id,
-                        match_location="description",
+                def create_table_result(match_location: str) -> SearchResultItem:
+                    return _create_search_result(
+                        "table", project_id, dataset_id, match_location, table.table_id
                     )
-                    if not _is_duplicate_result(result, results):
-                        results.append(result)
+
+                _search_in_text_fields(
+                    table.table_id,
+                    table.description,
+                    keyword,
+                    create_table_result,
+                    results,
+                )
 
     return results
 

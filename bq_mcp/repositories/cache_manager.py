@@ -31,30 +31,48 @@ def get_cache_file_path(project_id: str, dataset_id: str) -> Path:
     return Path(setting.cache_file_base_dir) / project_id / f"{dataset_id}.json"
 
 
+def _ensure_timezone_aware(dt: datetime.datetime) -> datetime.datetime:
+    """Ensure datetime is timezone-aware, treating naive as UTC."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=datetime.timezone.utc)
+    return dt
+
+
+def _is_cache_expired(last_updated: datetime.datetime, ttl_seconds: int) -> bool:
+    """Check if cache timestamp is expired based on TTL."""
+    ttl = datetime.timedelta(seconds=ttl_seconds)
+    now = datetime.datetime.now(datetime.timezone.utc)
+    last_updated_aware = _ensure_timezone_aware(last_updated)
+    return (now - last_updated_aware) >= ttl
+
+
+def _update_memory_cache(
+    project_id: str, dataset_id: str, timestamp: datetime.datetime
+) -> None:
+    """Update the in-memory cache with timestamp."""
+    if project_id not in _project_datasets_cache:
+        _project_datasets_cache[project_id] = {}
+    _project_datasets_cache[project_id][dataset_id] = timestamp
+
+
 def load_cache_file(
     project_id: str, dataset_id: str, cache_file: Path
 ) -> Optional[CachedData]:
     logger = log.get_logger()
     settings = config.get_settings()
-    ttl = datetime.timedelta(seconds=settings.cache_ttl_seconds)
+
     with open(cache_file, "r", encoding="utf-8") as f:
         data = json.load(f)
         last_updated = datetime.datetime.fromisoformat(data["last_updated"])
-
-        # Treat as UTC if no timezone information
-        if last_updated.tzinfo is None:
-            last_updated = last_updated.replace(tzinfo=datetime.timezone.utc)
+        last_updated = _ensure_timezone_aware(last_updated)
 
         # Check if cache is within valid period
-        now = datetime.datetime.now(datetime.timezone.utc)
-        if (now - last_updated) >= ttl:
+        if _is_cache_expired(last_updated, settings.cache_ttl_seconds):
             logger.info(f"Cache expired: {project_id}.{dataset_id}")
             return None
 
         # Update memory cache
-        if project_id not in _project_datasets_cache:
-            _project_datasets_cache[project_id] = {}
-        _project_datasets_cache[project_id][dataset_id] = last_updated
+        _update_memory_cache(project_id, dataset_id, last_updated)
 
         # Add dataset information
         dataset_meta = DatasetMetadata.model_validate(data["dataset"])
@@ -138,10 +156,7 @@ def save_dataset_cache(
     if timestamp is None:
         timestamp = datetime.datetime.now(datetime.timezone.utc)
 
-    # Treat as UTC if no timezone information
-    if timestamp.tzinfo is None:
-        timestamp = timestamp.replace(tzinfo=datetime.timezone.utc)
-
+    timestamp = _ensure_timezone_aware(timestamp)
     cache_file = get_cache_file_path(project_id, dataset.dataset_id)
 
     # Create directory if it doesn't exist
@@ -160,9 +175,7 @@ def save_dataset_cache(
             json.dump(cache_data, f, indent=2)
 
         # Also update memory cache
-        if project_id not in _project_datasets_cache:
-            _project_datasets_cache[project_id] = {}
-        _project_datasets_cache[project_id][dataset.dataset_id] = timestamp
+        _update_memory_cache(project_id, dataset.dataset_id, timestamp)
     except Exception as e:
         logger.error(f"Error occurred while saving cache file: {cache_file}, {e}")
 
@@ -194,20 +207,17 @@ def is_cache_valid(cached_data: Optional[CachedData]) -> bool:
     """Check if cache data is within valid period."""
     if not cached_data or not cached_data.last_updated:
         return False
+
     logger = log.get_logger()
     settings = config.get_settings()
-    ttl = datetime.timedelta(seconds=settings.cache_ttl_seconds)
-    now = datetime.datetime.now(datetime.timezone.utc)
-    # Convert to aware if last_updated doesn't have timezone info
-    last_updated_aware = cached_data.last_updated
-    if last_updated_aware.tzinfo is None:
-        # For naive datetime, assume local timezone or UTC.
-        # Here treat as UTC (BigQuery timestamps are usually UTC)
-        last_updated_aware = last_updated_aware.replace(tzinfo=datetime.timezone.utc)
 
-    is_valid = (now - last_updated_aware) < ttl
+    is_valid = not _is_cache_expired(
+        cached_data.last_updated, settings.cache_ttl_seconds
+    )
+    last_updated_aware = _ensure_timezone_aware(cached_data.last_updated)
+
     logger.debug(
-        f"Cache validity check: Now={now}, LastUpdated={last_updated_aware}, TTL={ttl}, Valid={is_valid}"
+        f"Cache validity check: LastUpdated={last_updated_aware}, Valid={is_valid}"
     )
     return is_valid
 
@@ -225,15 +235,14 @@ def is_dataset_cache_valid(project_id: str, dataset_id: str) -> bool:
     """
     logger = log.get_logger()
     settings = config.get_settings()
-    ttl = datetime.timedelta(seconds=settings.cache_ttl_seconds)
+
     # Check memory cache
     if (
         project_id in _project_datasets_cache
         and dataset_id in _project_datasets_cache[project_id]
     ):
         last_updated = _project_datasets_cache[project_id][dataset_id]
-        now = datetime.datetime.now(datetime.timezone.utc)
-        return (now - last_updated) < ttl
+        return not _is_cache_expired(last_updated, settings.cache_ttl_seconds)
 
     # Check file
     cache_file = get_cache_file_path(project_id, dataset_id)
@@ -244,19 +253,13 @@ def is_dataset_cache_valid(project_id: str, dataset_id: str) -> bool:
         with open(cache_file, "r", encoding="utf-8") as f:
             data = json.load(f)
             last_updated = datetime.datetime.fromisoformat(data["last_updated"])
+            last_updated = _ensure_timezone_aware(last_updated)
 
-            # Treat as UTC if no timezone information
-            if last_updated.tzinfo is None:
-                last_updated = last_updated.replace(tzinfo=datetime.timezone.utc)
+            is_valid = not _is_cache_expired(last_updated, settings.cache_ttl_seconds)
 
-            now = datetime.datetime.now(datetime.timezone.utc)
-            is_valid = (now - last_updated) < ttl
-
-            # Update memory cache
+            # Update memory cache if valid
             if is_valid:
-                if project_id not in _project_datasets_cache:
-                    _project_datasets_cache[project_id] = {}
-                _project_datasets_cache[project_id][dataset_id] = last_updated
+                _update_memory_cache(project_id, dataset_id, last_updated)
 
             return is_valid
     except Exception as e:

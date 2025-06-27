@@ -15,11 +15,29 @@ from pydantic.fields import FieldInfo
 from bq_mcp.core.entities import Settings
 
 
+def _extract_default_value(field_info: FieldInfo) -> Any:
+    """Extract default value from field info"""
+    if hasattr(field_info, "default") and field_info.default is not ...:
+        if str(field_info.default) != "PydanticUndefined":
+            return field_info.default
+    elif (
+        hasattr(field_info, "default_factory")
+        and field_info.default_factory is not None
+    ):
+        try:
+            default_value = field_info.default_factory()
+            # Convert empty containers to None for cleaner output
+            if default_value in ([], {}, set()):
+                return None
+            return default_value
+        except Exception:
+            return None
+    return None
+
+
 def extract_env_variables_from_settings() -> List[Tuple[str, Any, str]]:
     """Extract environment variables from Settings class"""
     env_vars = []
-
-    # Get model information of Settings class
     model_fields = Settings.model_fields
 
     for field_name, field_info in model_fields.items():
@@ -27,29 +45,10 @@ def extract_env_variables_from_settings() -> List[Tuple[str, Any, str]]:
         env_name = field_name.upper()
 
         # Get default value
-        default_value = None
-        if hasattr(field_info, "default") and field_info.default is not ...:
-            # Handle PydanticUndefined appropriately
-            if str(field_info.default) != "PydanticUndefined":
-                default_value = field_info.default
-        elif (
-            hasattr(field_info, "default_factory")
-            and field_info.default_factory is not None
-        ):
-            # Handle default_factory by calling it to get the actual default
-            try:
-                default_value = field_info.default_factory()
-                # Convert empty containers to None for cleaner output
-                if default_value in ([], {}, set()):
-                    default_value = None  # Will be shown as empty in .env.example
-            except Exception:
-                # If default_factory fails, treat as having a default but don't show the value
-                default_value = None
+        default_value = _extract_default_value(field_info)
 
         # Get field type information
-        field_type = (
-            field_info.annotation if hasattr(field_info, "annotation") else None
-        )
+        field_type = getattr(field_info, "annotation", None)
 
         # Generate comment
         comment = generate_comment_for_field(
@@ -61,19 +60,12 @@ def extract_env_variables_from_settings() -> List[Tuple[str, Any, str]]:
     return env_vars
 
 
-def generate_comment_for_field(
-    field_name: str, default_value: Any, field_type: Any, field_info: FieldInfo
-) -> str:
-    """Generate comment from field information"""
-
-    # Get field description
-    description = getattr(field_info, "description", "") if field_info else ""
-
-    # Determine required/optional from type information
-    # Check if field is Optional[T] type
+def _is_optional_field(
+    field_type: Any, default_value: Any, field_info: FieldInfo
+) -> bool:
+    """Check if field is optional based on type and default value"""
     import typing
 
-    # Check if field has default value or default_factory
     has_default = (
         default_value is not None and str(default_value) != "PydanticUndefined"
     ) or (
@@ -81,14 +73,27 @@ def generate_comment_for_field(
         and field_info.default_factory is not None
     )
 
-    is_optional = has_default or (
+    is_union_with_none = (
         hasattr(field_type, "__origin__")
         and field_type.__origin__ is typing.Union
         and type(None) in field_type.__args__
     )
+
+    return has_default or is_union_with_none
+
+
+def generate_comment_for_field(
+    field_name: str, default_value: Any, field_type: Any, field_info: FieldInfo
+) -> str:
+    """Generate comment from field information"""
+    # Get field description
+    description = getattr(field_info, "description", "") if field_info else ""
+
+    # Determine if field is optional
+    is_optional = _is_optional_field(field_type, default_value, field_info)
     required_or_optional = "Optional" if is_optional else "Required"
 
-    # Auto-generated comment
+    # Build comment parts
     comment_parts = [f"{required_or_optional}:"]
 
     if description:
@@ -102,9 +107,28 @@ def generate_comment_for_field(
     return " ".join(comment_parts)
 
 
+def _format_env_value(default_value: Any) -> str:
+    """Format environment variable value for output"""
+    if (
+        default_value is None
+        or default_value == ""
+        or str(default_value) == "PydanticUndefined"
+    ):
+        return ""
+    return str(default_value)
+
+
+def _add_comment_lines(lines: List[str], comment: str) -> None:
+    """Add comment lines to output"""
+    for comment_line in comment.split("\n"):
+        if not comment_line.startswith("#"):
+            lines.append(f"# {comment_line}")
+        else:
+            lines.append(comment_line)
+
+
 def generate_env_example(env_vars: List[Tuple[str, Any, str]], output_path: Path):
     """Generate .env.example from environment variables"""
-
     # Group by category
     categories = {
         "GCP Settings": [
@@ -136,25 +160,11 @@ def generate_env_example(env_vars: List[Tuple[str, Any, str]], output_path: Path
                 default_value, comment = env_dict[var_name]
 
                 # Add comment
-                for comment_line in comment.split("\n"):
-                    lines.append(
-                        f"# {comment_line}"
-                        if not comment_line.startswith("#")
-                        else comment_line
-                    )
+                _add_comment_lines(lines, comment)
 
                 # Environment variable setting
-                if (
-                    default_value is None
-                    or default_value == ""
-                    or str(default_value) == "PydanticUndefined"
-                ):
-                    lines.append(f"{var_name}=")
-                elif isinstance(default_value, str):
-                    lines.append(f"{var_name}={default_value}")
-                else:
-                    lines.append(f"{var_name}={default_value}")
-
+                value = _format_env_value(default_value)
+                lines.append(f"{var_name}={value}")
                 lines.append("")
 
     # Write to file

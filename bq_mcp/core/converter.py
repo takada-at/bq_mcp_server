@@ -11,22 +11,55 @@ from bq_mcp.core.entities import (
 )
 
 
+def _format_bytes(bytes_count: int) -> str:
+    """Format byte count to human-readable format"""
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
+        if bytes_count < 1024.0:
+            return f"{bytes_count:.1f} {unit}"
+        bytes_count /= 1024.0
+    return f"{bytes_count:.1f} PB"
+
+
+def _create_markdown_header(title: str, level: int = 2) -> str:
+    """Create markdown header with specified level"""
+    prefix = "#" * level
+    return f"{prefix} {title}\n"
+
+
+def _add_optional_field(
+    result: List[str], label: str, value: str, format_func=None
+) -> None:
+    """Add optional field to result list if value exists"""
+    if value:
+        formatted_value = format_func(value) if format_func else value
+        result.append(f"**{label}:** {formatted_value}\n")
+
+
 def convert_datasets_to_markdown(datasets: List[DatasetMetadata]) -> str:
     """Convert dataset metadata list to markdown format"""
     result = []
     for dataset in datasets:
         # Add dataset name as header
-        result.append(f"## Dataset: `{dataset.project_id}.{dataset.dataset_id}`\n")
+        result.append(
+            _create_markdown_header(
+                f"Dataset: `{dataset.project_id}.{dataset.dataset_id}`"
+            )
+        )
 
         # Add dataset description if exists
         if dataset.description:
             result.append(f"{dataset.description}\n")
 
         # Add dataset location if exists
-        if dataset.location:
-            result.append(f"**Location:** {dataset.location}\n")
+        _add_optional_field(result, "Location", dataset.location)
 
     return "\n".join(result)
+
+
+def _create_column_table_row(column: ColumnSchema) -> str:
+    """Create a table row for a column schema"""
+    desc = column.description or ""
+    return f"| {column.name} | {column.type} | {column.mode} | {desc} |"
 
 
 def convert_tables_to_markdown(tables: List[TableMetadata]) -> str:
@@ -35,7 +68,7 @@ def convert_tables_to_markdown(tables: List[TableMetadata]) -> str:
 
     for table in tables:
         # Add table name as header
-        result.append(f"### Table: `{table.full_table_id}`\n")
+        result.append(_create_markdown_header(f"Table: `{table.full_table_id}`", 3))
 
         # Add table description if exists
         if table.description:
@@ -52,20 +85,12 @@ def convert_tables_to_markdown(tables: List[TableMetadata]) -> str:
             result.append("|---------|---------|--------|------|")
 
             for column in table.schema_.columns:
-                desc = column.description or ""
+                result.append(_create_column_table_row(column))
 
                 # Special display for nested fields
                 if column.fields:
-                    result.append(
-                        f"| {column.name} | {column.type} | {column.mode} | {desc} |"
-                    )
-                    # Display nested fields as collapsible section
                     nested_fields_md = _convert_nested_fields_to_markdown(column.fields)
                     result.append(nested_fields_md)
-                else:
-                    result.append(
-                        f"| {column.name} | {column.type} | {column.mode} | {desc} |"
-                    )
 
             result.append("\n")  # Empty line after table
 
@@ -176,77 +201,65 @@ def convert_search_results_to_markdown(
     return "\n".join(result)
 
 
-def convert_query_result_to_markdown(
-    result: QueryExecutionResult, project_id: str = None
-) -> str:
-    """Convert query execution result to markdown format"""
+def _create_query_result_table(rows: List[dict]) -> str:
+    """Create markdown table from query result rows"""
+    if not rows:
+        return ""
 
-    def format_bytes(bytes_count: int) -> str:
-        """Format byte count to human-readable format"""
-        for unit in ["B", "KB", "MB", "GB", "TB"]:
-            if bytes_count < 1024.0:
-                return f"{bytes_count:.1f} {unit}"
-            bytes_count /= 1024.0
-        return f"{bytes_count:.1f} PB"
+    # Get column names from first row
+    columns = list(rows[0].keys())
 
-    if result.success:
-        # Format results on success
-        scan_size = format_bytes(result.total_bytes_processed or 0)
-        bill_size = format_bytes(result.total_bytes_billed or 0)
+    # Create table header
+    table_content = "## Query Results\n\n"
+    table_content += "| " + " | ".join(columns) + " |\n"
+    table_content += "| " + " | ".join(["---"] * len(columns)) + " |\n"
 
-        # Create query result table
-        table_content = ""
-        if result.rows and len(result.rows) > 0:
-            # Get column names from first row
-            columns = list(result.rows[0].keys())
+    # Add rows (limited to first 20 rows for readability)
+    for row in rows[:20]:
+        values = []
+        for col in columns:
+            value = row.get(col, "")
+            # Convert to string and truncate if too long
+            str_value = str(value) if value is not None else ""
+            if len(str_value) > 50:
+                str_value = str_value[:47] + "..."
+            values.append(str_value)
+        table_content += "| " + " | ".join(values) + " |\n"
 
-            # Create table header
-            table_content = "## Query Results\n\n"
-            table_content += "| " + " | ".join(columns) + " |\n"
-            table_content += "| " + " | ".join(["---"] * len(columns)) + " |\n"
+    if len(rows) > 20:
+        table_content += f"\n*... {len(rows) - 20} more rows*\n"
 
-            # Add rows (limited to first 20 rows for readability)
-            for row in result.rows[:20]:
-                values = []
-                for col in columns:
-                    value = row.get(col, "")
-                    # Convert to string and truncate if too long
-                    str_value = str(value) if value is not None else ""
-                    if len(str_value) > 50:
-                        str_value = str_value[:47] + "..."
-                    values.append(str_value)
-                table_content += "| " + " | ".join(values) + " |\n"
+    return table_content
 
-            if len(result.rows) > 20:
-                table_content += f"\n*... {len(result.rows) - 20} more rows*\n"
 
-        markdown_content = f"""# BigQuery Query Execution Result
-
-## Query Information
-- **Status**: ✅ Success
+def _create_execution_info_section(result, project_id: str, success: bool) -> str:
+    """Create query information section"""
+    status_icon = "✅ Success" if success else "❌ Failed"
+    return f"""## Query Information
+- **Status**: {status_icon}
 - **Project ID**: {project_id or "Default"}
-- **Job ID**: {result.job_id or "N/A"}
-- **Execution Time**: {result.execution_time_ms or 0} ms
+- **Job ID**: {getattr(result, "job_id", None) or "N/A"}
+- **Execution Time**: {getattr(result, "execution_time_ms", None) or 0} ms
+"""
 
-## Resource Usage
+
+def _create_resource_usage_section(result) -> str:
+    """Create resource usage section for successful queries"""
+    scan_size = _format_bytes(result.total_bytes_processed or 0)
+    bill_size = _format_bytes(result.total_bytes_billed or 0)
+
+    return f"""## Resource Usage
 - **Bytes Processed**: {scan_size} ({result.total_bytes_processed or 0:,} bytes)
 - **Bytes Billed**: {bill_size} ({result.total_bytes_billed or 0:,} bytes)
 - **Rows Returned**: {result.total_rows or 0:,}
-
-{table_content}
 """
-    else:
-        # Format results on error
-        markdown_content = f"""# BigQuery Query Execution Result
 
-## Query Information
-- **Status**: ❌ Failed
-- **Project ID**: {project_id or "Default"}
-- **Execution Time**: {result.execution_time_ms or 0} ms
 
-## Error Details
+def _create_error_section(error_message: str) -> str:
+    """Create error details section"""
+    return f"""## Error Details
 ```
-{result.error_message or "Unknown error"}
+{error_message or "Unknown error"}
 ```
 
 ## Recommendations
@@ -256,68 +269,42 @@ def convert_query_result_to_markdown(
 - Test with a smaller dataset first
 """
 
+
+def convert_query_result_to_markdown(
+    result: QueryExecutionResult, project_id: str = None
+) -> str:
+    """Convert query execution result to markdown format"""
+    markdown_content = "# BigQuery Query Execution Result\n\n"
+
+    if result.success:
+        markdown_content += _create_execution_info_section(result, project_id, True)
+        markdown_content += "\n" + _create_resource_usage_section(result)
+
+        if result.rows:
+            table_content = _create_query_result_table(result.rows)
+            markdown_content += "\n" + table_content
+    else:
+        markdown_content += _create_execution_info_section(result, project_id, False)
+        markdown_content += "\n" + _create_error_section(result.error_message)
+
     return markdown_content
 
 
-def convert_dry_run_result_to_markdown(
-    result: QueryDryRunResult, project_id: str = None
-) -> str:
-    """Convert dry run result to markdown format"""
-
-    def format_bytes(bytes_count: int) -> str:
-        """Format byte count to human-readable format"""
-        for unit in ["B", "KB", "MB", "GB", "TB"]:
-            if bytes_count < 1024.0:
-                return f"{bytes_count:.1f} {unit}"
-            bytes_count /= 1024.0
-        return f"{bytes_count:.1f} PB"
-
-    scan_size = format_bytes(result.total_bytes_processed or 0)
-    bill_size = format_bytes(result.total_bytes_billed or 0)
-
+def _get_dry_run_status(result: QueryDryRunResult) -> tuple[str, str]:
+    """Get status icon and text for dry run result"""
     if result.error_message:
-        status_icon = "❌"
-        status_text = "Fail"
+        return "❌", "Fail"
     elif not result.is_safe:
-        status_icon = "⚠️"
-        status_text = "Caution Required"
+        return "⚠️", "Caution Required"
     else:
-        status_icon = "✅"
-        status_text = "Safe"
+        return "✅", "Safe"
 
-    if result.error_message:
-        return f"""# BigQuery Query Scan Amount Check Result
 
-## Query Information
-- **Status**: ❌ Failed
-- **Project ID**: {project_id or "Default"}
-
-## Error Details
-```
-{result.error_message or "Unknown error"}
-```
-
-## Recommendations
-- Check SQL syntax
-- Verify that table and column names exist
-- Ensure you have proper permissions
-- Test with a smaller dataset first"""
-    else:
-        markdown_content = f"""# BigQuery Query Scan Amount Check Result
-
-## Check Information
-- **Status**: {status_icon} {status_text}
-- **Project ID**: {project_id or "Default"}
-
-## Expected Resource Usage
-- **Bytes to be Processed**: {scan_size} ({result.total_bytes_processed or 0:,} bytes)
-- **Bytes to be Billed**: {bill_size} ({result.total_bytes_billed or 0:,} bytes)
-
-## Safety Assessment
-"""
-
+def _create_safety_assessment_section(result: QueryDryRunResult) -> str:
+    """Create safety assessment section for dry run"""
     if result.is_safe:
-        markdown_content += """✅ **This query can be executed safely**
+        return """## Safety Assessment
+✅ **This query can be executed safely**
 - Scan amount is below the configured limit
 - It can be executed without issues
 
@@ -325,7 +312,8 @@ def convert_dry_run_result_to_markdown(
 - Execute using the `execute_query` tool if needed
 """
     else:
-        markdown_content += """⚠️ **This query will scan a large amount of data**
+        return """## Safety Assessment
+⚠️ **This query will scan a large amount of data**
 - Scan amount exceeds the configured limit
 - Consider the following points before execution
 
@@ -335,5 +323,33 @@ def convert_dry_run_result_to_markdown(
 - Specify only necessary columns in SELECT clause
 - Add LIMIT clause to restrict result rows
 """
+
+
+def convert_dry_run_result_to_markdown(
+    result: QueryDryRunResult, project_id: str = None
+) -> str:
+    """Convert dry run result to markdown format"""
+    markdown_content = "# BigQuery Query Scan Amount Check Result\n\n"
+
+    if result.error_message:
+        markdown_content += f"""## Query Information
+- **Status**: ❌ Failed
+- **Project ID**: {project_id or "Default"}
+
+{_create_error_section(result.error_message)}"""
+    else:
+        status_icon, status_text = _get_dry_run_status(result)
+        scan_size = _format_bytes(result.total_bytes_processed or 0)
+        bill_size = _format_bytes(result.total_bytes_billed or 0)
+
+        markdown_content += f"""## Check Information
+- **Status**: {status_icon} {status_text}
+- **Project ID**: {project_id or "Default"}
+
+## Expected Resource Usage
+- **Bytes to be Processed**: {scan_size} ({result.total_bytes_processed or 0:,} bytes)
+- **Bytes to be Billed**: {bill_size} ({result.total_bytes_billed or 0:,} bytes)
+
+{_create_safety_assessment_section(result)}"""
 
     return markdown_content
