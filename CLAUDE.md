@@ -82,3 +82,15 @@ The MCP server (`mcp_server.py`) is the primary interface, providing four main t
 - `QUERY_TIMEOUT_SECONDS` - Query execution timeout (default: 300 seconds)
 
 Run the MCP server with: `python -m bq_mcp.adapters.mcp_server`
+
+## Important Development Notes
+
+### MCP Server Development
+**CRITICAL**: When developing for MCP (Model Context Protocol) servers that use stdio transport:
+- **ALWAYS use `log.get_logger()` statements** in the codebase - they will kee MCP communication
+- Any extraneous output to stdout will corrupt the protocol stream
+- Debug output goes to log files, not stdout, keeping MCP communication clean
+
+### Debugging MCP Issues
+- Check log files in `logs/` directory for debugging information
+- Test with web API (`bq_mcp.adapters.web`) as alternative to stdio MCP for development
