@@ -87,7 +87,7 @@ Run the MCP server with: `python -m bq_mcp.adapters.mcp_server`
 
 ### MCP Server Development
 **CRITICAL**: When developing for MCP (Model Context Protocol) servers that use stdio transport:
-- **ALWAYS use `log.get_logger()` statements** in the codebase - they will kee MCP communication
+- **ALWAYS use `log.get_logger()` statements** in the codebase - they will keep MCP communication
 - Any extraneous output to stdout will corrupt the protocol stream
 - Debug output goes to log files, not stdout, keeping MCP communication clean
 
