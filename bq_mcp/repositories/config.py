@@ -24,25 +24,65 @@ def get_settings() -> Settings:
     return _settings
 
 
+def _load_env_variable(key: str, default=None, cast_func=None):
+    """Load environment variable with optional type casting"""
+    value = os.getenv(key, default)
+    if cast_func and value is not None:
+        try:
+            return cast_func(value)
+        except (ValueError, TypeError):
+            return default
+    return value
+
+
+def _parse_filter_list(filters_str: str) -> List[str]:
+    """Parse comma-separated filter string into list"""
+    if not filters_str:
+        return []
+    return [f.strip() for f in filters_str.split(",") if f.strip()]
+
+
+def _validate_settings(settings: Settings) -> None:
+    """Validate settings and log warnings for issues"""
+    logger = log.get_logger()
+
+    if not settings.project_ids:
+        logger.warning(
+            "Warning: Environment variable 'PROJECT_IDS' is not set. Please specify GCP project IDs separated by commas."
+        )
+
+    if settings.gcp_service_account_key_path:
+        if not os.path.exists(settings.gcp_service_account_key_path):
+            logger.warning(
+                f"Warning: The specified GCP service account key file was not found: {settings.gcp_service_account_key_path}"
+            )
+    else:
+        logger.warning(
+            "Info: GCP_SERVICE_ACCOUNT_KEY_PATH is not set. The application will try to use default authentication credentials (ADC)."
+        )
+
+
 def init_setting() -> Settings:
-    # Create settings instance
-    # Load environment variables and create initial values
-    gcp_service_account_key_path = os.getenv("GCP_SERVICE_ACCOUNT_KEY_PATH", None)
-    project_ids = os.getenv("PROJECT_IDS", "").split(",")
-    dataset_filters_str = os.getenv("DATASET_FILTERS", "")
-    dataset_filters = [f.strip() for f in dataset_filters_str.split(",") if f.strip()]
-    cache_ttl_seconds = int(os.getenv("CACHE_TTL_SECONDS", 3600))
-    cache_file_base_dir = os.getenv(
-        "CACHE_FILE_BASE_DIR", str(root / ".bq_metadata_cache")
+    """Initialize settings from environment variables"""
+    # Load environment variables
+    gcp_service_account_key_path = _load_env_variable("GCP_SERVICE_ACCOUNT_KEY_PATH")
+    project_ids = _load_env_variable("PROJECT_IDS", "").split(",")
+    dataset_filters = _parse_filter_list(_load_env_variable("DATASET_FILTERS", ""))
+    cache_ttl_seconds = _load_env_variable("CACHE_TTL_SECONDS", 3600, int)
+    cache_file_base_dir = os.path.abspath(
+        _load_env_variable("CACHE_FILE_BASE_DIR", str(root / ".bq_metadata_cache"))
     )
-    cache_file_base_dir = os.path.abspath(cache_file_base_dir)
-    api_host = os.getenv("API_HOST", "127.0.0.1")
-    api_port = int(os.getenv("API_PORT", 8000))
+    api_host = _load_env_variable("API_HOST", "127.0.0.1")
+    api_port = _load_env_variable("API_PORT", 8000, int)
 
     # Query execution settings
-    max_scan_bytes = int(os.getenv("MAX_SCAN_BYTES", 1024 * 1024 * 1024))  # 1GB
-    default_query_limit = int(os.getenv("DEFAULT_QUERY_LIMIT", 10))
-    query_timeout_seconds = int(os.getenv("QUERY_TIMEOUT_SECONDS", 300))  # 5 minutes
+    max_scan_bytes = _load_env_variable(
+        "MAX_SCAN_BYTES", 1024 * 1024 * 1024, int
+    )  # 1GB
+    default_query_limit = _load_env_variable("DEFAULT_QUERY_LIMIT", 10, int)
+    query_timeout_seconds = _load_env_variable(
+        "QUERY_TIMEOUT_SECONDS", 300, int
+    )  # 5 minutes
 
     settings = Settings(
         gcp_service_account_key_path=gcp_service_account_key_path,
@@ -56,27 +96,8 @@ def init_setting() -> Settings:
         default_query_limit=default_query_limit,
         query_timeout_seconds=query_timeout_seconds,
     )
-    logger = log.get_logger()
 
-    # --- Simple validation of configuration values ---
-    if not settings.project_ids:
-        logger.warning(
-            "Warning: Environment variable 'PROJECT_IDS' is not set. Please specify GCP project IDs separated by commas."
-        )
-        # If needed, processing can be stopped here
-        # raise ValueError("PROJECT_IDS is not set.")
-
-    if settings.gcp_service_account_key_path and not os.path.exists(
-        settings.gcp_service_account_key_path
-    ):
-        logger.warning(
-            f"Warning: The specified GCP service account key file was not found: {settings.gcp_service_account_key_path}"
-        )
-        # Display warning as authentication will error in processes that require it
-    elif not settings.gcp_service_account_key_path:
-        logger.warning(
-            "Info: GCP_SERVICE_ACCOUNT_KEY_PATH is not set. The application will try to use default authentication credentials (ADC)."
-        )
+    _validate_settings(settings)
     return settings
 
 

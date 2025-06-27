@@ -97,7 +97,6 @@ async def get_tables(
         cache = await get_current_cache()
         found_dataset = False
         settings = config.get_settings()
-        print("cache", cache)
 
         for proj_id in settings.project_ids:
             if proj_id in cache.tables and dataset_id in cache.tables[proj_id]:
