@@ -36,11 +36,11 @@ def get_bigquery_client() -> Optional[Dataset]:
                 f"Authenticating using service account key: {settings.gcp_service_account_key_path}"
             )
             token = Token(settings.gcp_service_account_key_path)
-            dataset = Dataset(project=project_to_use, session=session, token=token)
+            dataset = Dataset(project=project_to_use, session=session, token=token)  # type: ignore
         else:
             logger.info("Authenticating using Application Default Credentials (ADC).")
             token = Token()
-            dataset = Dataset(project=project_to_use, session=session, token=token)
+            dataset = Dataset(project=project_to_use, session=session, token=token)  # type: ignore
         logger.info(
             f"Async BigQuery client initialization ready. Default project: {project_to_use}"
         )
@@ -121,10 +121,10 @@ async def get_dataset_detail(
         dataset = Dataset(
             dataset_name=dataset_id,
             project=project_id,
-            session=client.session.session,
+            session=client.session.session,  # type: ignore
             token=client.token,
         )
-        dataset_details = await dataset.get(session=client.session)
+        dataset_details = await dataset.get(session=client.session)  # type: ignore
         if not dataset_details:
             logger.warning(f"Dataset {project_id}.{dataset_id} not found.")
             return None
@@ -157,7 +157,9 @@ async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetada
     async def list_datasets_api(params: Dict[str, Any]) -> Dict[str, Any]:
         """Internal function to call dataset list API"""
         return await Dataset(
-            project=project_id, session=client.session.session, token=client.token
+            project=project_id,
+            session=client.session.session,
+            token=client.token,  # type: ignore
         ).list_datasets(params=params)
 
     # Execute pagination processing with common function
@@ -187,12 +189,12 @@ async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetada
         dataset = Dataset(
             dataset_name=actual_dataset_id,
             project=actual_project_id,
-            session=client.session.session,
+            session=client.session.session,  # type: ignore
             token=client.token,
         )
         if description is None:
             full_dataset_details = await dataset.get(
-                session=client.session
+                session=client.session  # type: ignore
             )  # This will fetch the dataset details
             description = full_dataset_details.get("description")
 
@@ -223,7 +225,7 @@ def _parse_schema(schema_fields: List[dict]) -> List[ColumnSchema]:  # Changed t
 
         columns.append(
             ColumnSchema(
-                name=field_data.get("name"),
+                name=field_data.get("name") or "",
                 type=field_type,
                 mode=field_data.get(
                     "mode", "NULLABLE"
@@ -243,7 +245,7 @@ async def fetch_tables_and_schemas(
     dataset = Dataset(
         dataset_name=dataset_id,
         project=project_id,
-        session=client.session.session,
+        session=client.session.session,  # type: ignore
         token=client.token,
     )
 
@@ -275,7 +277,7 @@ async def fetch_tables_and_schemas(
             dataset_name=actual_dataset_id,
             table_name=actual_table_id,
             project=actual_project_id,
-            session=client.session.session,
+            session=client.session.session,  # type: ignore
             token=client.token,
         )
         full_table_id = f"{actual_project_id}.{actual_dataset_id}.{actual_table_id}"

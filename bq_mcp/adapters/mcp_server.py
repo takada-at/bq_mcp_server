@@ -15,7 +15,7 @@ from typing import Optional
 from mcp.server.fastmcp import FastMCP
 
 from bq_mcp.core import converter, logic
-from bq_mcp.core.entities import ApplicationContext
+from bq_mcp.core.entities import ApplicationContext, CachedData
 from bq_mcp.repositories import cache_manager, config, log, search_engine
 
 
@@ -28,7 +28,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[ApplicationContext]:
     context = ApplicationContext(
         settings=setting,
         log_setting=log_setting,
-        cache_data=cache_data,
+        cache_data=cache_data or CachedData(last_updated=None),
     )
 
     yield context

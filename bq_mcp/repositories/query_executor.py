@@ -20,7 +20,7 @@ class QueryExecutor:
     def __init__(self, settings: Settings):
         self.settings = settings
         self.logger = log.get_logger()
-        self.client = None
+        self.client: Optional[bigquery.Client] = None
 
     def _get_client(self, project_id: Optional[str] = None) -> bigquery.Client:
         """Get BigQuery client"""
@@ -34,6 +34,7 @@ class QueryExecutor:
                 self.client = bigquery.Client(
                     project=project_id or self.settings.project_ids[0]
                 )
+        assert self.client is not None
         return self.client
 
     def _validate_and_prepare_query(self, sql: str) -> str:
@@ -102,6 +103,7 @@ class QueryExecutor:
                 total_bytes_billed=total_bytes_billed,
                 is_safe=is_safe_to_run,
                 modified_sql=sql,
+                error_message=None,
             )
 
         except Exception as e:
@@ -142,6 +144,12 @@ class QueryExecutor:
                 if not dry_run_result.is_safe:
                     return QueryExecutionResult(
                         success=False,
+                        rows=None,
+                        total_rows=None,
+                        total_bytes_processed=None,
+                        total_bytes_billed=None,
+                        execution_time_ms=None,
+                        job_id=None,
                         error_message=(
                             f"Query scan amount exceeds limit. "
                             f"Expected scan amount: {dry_run_result.total_bytes_processed:,} bytes, "
@@ -192,6 +200,7 @@ class QueryExecutor:
                 total_bytes_billed=query_job.total_bytes_billed,
                 execution_time_ms=execution_time_ms,
                 job_id=query_job.job_id,
+                error_message=None,
             )
 
         except Exception as e:
@@ -202,11 +211,16 @@ class QueryExecutor:
 
             return QueryExecutionResult(
                 success=False,
+                rows=None,
+                total_rows=None,
+                total_bytes_processed=None,
+                total_bytes_billed=None,
                 execution_time_ms=execution_time_ms,
+                job_id=None,
                 error_message=error_msg,
             )
 
-    def format_bytes(self, bytes_count: int) -> str:
+    def format_bytes(self, bytes_count: int | float) -> str:
         """Format byte count into human-readable format"""
         for unit in ["B", "KB", "MB", "GB", "TB"]:
             if bytes_count < 1024.0:

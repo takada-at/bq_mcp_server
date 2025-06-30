@@ -57,7 +57,7 @@ def _update_memory_cache(
 
 def load_cache_file(
     project_id: str, dataset_id: str, cache_file: Path
-) -> Optional[CachedData]:
+) -> Optional[tuple[DatasetMetadata, list[TableMetadata]]]:
     logger = log.get_logger()
     settings = config.get_settings()
 
@@ -301,12 +301,12 @@ async def update_cache() -> Optional[CachedData]:
         results = await asyncio.gather(*tasks)
         for project_id, datasets, project_tables in results:
             all_datasets[project_id] = datasets
-            for project_id, dataset_id in project_tables.keys():
-                if project_id not in all_tables:
-                    all_tables[project_id] = {}
-                if dataset_id not in all_tables[project_id]:
-                    all_tables[project_id][dataset_id] = project_tables[
-                        project_id, dataset_id
+            for proj_id, dataset_id in project_tables.keys():
+                if proj_id not in all_tables:
+                    all_tables[proj_id] = {}
+                if dataset_id not in all_tables[proj_id]:
+                    all_tables[proj_id][dataset_id] = project_tables[
+                        proj_id, dataset_id
                     ]
             logger.info(f"Metadata retrieval for project '{project_id}' completed.")
 
@@ -324,7 +324,9 @@ async def update_cache() -> Optional[CachedData]:
     return new_cache_data
 
 
-async def fetch_and_save_dataset(project_id: str, dataset: Dict, bq_client, timestamp):
+async def fetch_and_save_dataset(
+    project_id: str, dataset: DatasetMetadata, bq_client, timestamp
+):
     tables = await bigquery_client.fetch_tables_and_schemas(
         bq_client, project_id, dataset.dataset_id
     )
@@ -334,7 +336,7 @@ async def fetch_and_save_dataset(project_id: str, dataset: Dict, bq_client, time
 
 async def update_cache_project(
     bq_client, project_id: str, logger, timestamp
-) -> Tuple[str, List[DatasetMetadata], Dict[str, List[TableMetadata]]]:
+) -> Tuple[str, List[DatasetMetadata], Dict[tuple[str, str], List[TableMetadata]]]:
     all_datasets = await bigquery_client.fetch_datasets(bq_client, project_id)
 
     # Apply dataset filters
@@ -392,15 +394,9 @@ async def update_dataset_cache(project_id: str, dataset_id: str) -> bool:
         f"Starting asynchronous cache update for dataset '{project_id}.{dataset_id}'..."
     )
 
-    client_session_tuple = bigquery_client.get_bigquery_client()
-    if not client_session_tuple:
-        logger.error("Could not obtain BigQuery client and session.")
-        return False
-
-    bq_client, session = client_session_tuple
-
-    if not session:
-        logger.error("Could not obtain aiohttp.ClientSession.")
+    bq_client = bigquery_client.get_bigquery_client()
+    if not bq_client:
+        logger.error("Could not obtain BigQuery client.")
         return False
 
     success = False
@@ -457,10 +453,7 @@ async def update_dataset_cache(project_id: str, dataset_id: str) -> bool:
         )
         success = False
     finally:
-        logger.debug(
-            f"Closing aiohttp.ClientSession in update_dataset_cache for {project_id}.{dataset_id}."
-        )
-        await session.close()
+        pass
 
     return success
 
