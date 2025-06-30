@@ -158,7 +158,7 @@ async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetada
         """Internal function to call dataset list API"""
         return await Dataset(
             project=project_id,
-            session=client.session.session,
+            session=client.session.session,  # type: ignore
             token=client.token,  # type: ignore
         ).list_datasets(params=params)
 
