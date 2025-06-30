@@ -57,7 +57,15 @@ def _update_memory_cache(
 
 def load_cache_file(
     project_id: str, dataset_id: str, cache_file: Path
-) -> Optional[tuple[DatasetMetadata, list[TableMetadata]]]:
+) -> Optional[Tuple[DatasetMetadata, List[TableMetadata]]]:
+    """Load cache file for a specific project and dataset.
+    Returns None if cache is expired or file is invalid.
+
+    :param project_id: Project ID
+    :param dataset_id: Dataset ID
+    :param cache_file: Path to the cache file
+    :return: Tuple of (DatasetMetadata, List[TableMetadata]) or None if cache is expired or invalid
+    """
     logger = log.get_logger()
     settings = config.get_settings()
 
@@ -452,9 +460,6 @@ async def update_dataset_cache(project_id: str, dataset_id: str) -> bool:
             f"Error occurred during asynchronous cache update for dataset '{project_id}.{dataset_id}': {e}"
         )
         success = False
-    finally:
-        pass
-
     return success
 
 
