@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from bq_mcp.core import converter, logic
 from bq_mcp.core.entities import (
     ApplicationContext,
+    CachedData,
     DatasetListResponse,
     QueryExecutionRequest,
     QueryExecutionResult,
@@ -28,7 +29,7 @@ async def lifespan(app: FastAPI):
     ApplicationContext(
         settings=settings,
         log_setting=log_setting,
-        cache_data=cache_data,
+        cache_data=cache_data or CachedData(last_updated=None),
     )
 
     logger = log.get_logger()

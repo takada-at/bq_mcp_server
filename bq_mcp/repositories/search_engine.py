@@ -102,7 +102,7 @@ def _is_duplicate_result(
 
 def _search_datasets(cached_data: CachedData, keyword: str) -> List[SearchResultItem]:
     """Search datasets"""
-    results = []
+    results: List[SearchResultItem] = []
 
     for project_id, datasets in cached_data.datasets.items():
         for dataset in datasets:
@@ -125,7 +125,7 @@ def _search_datasets(cached_data: CachedData, keyword: str) -> List[SearchResult
 
 def _search_tables(cached_data: CachedData, keyword: str) -> List[SearchResultItem]:
     """Search tables"""
-    results = []
+    results: List[SearchResultItem] = []
 
     for project_id, datasets_tables in cached_data.tables.items():
         for dataset_id, tables in datasets_tables.items():
@@ -151,7 +151,7 @@ def _search_table_columns(
     cached_data: CachedData, keyword: str
 ) -> List[SearchResultItem]:
     """Search table columns"""
-    results = []
+    results: List[SearchResultItem] = []
 
     for project_id, datasets_tables in cached_data.tables.items():
         for dataset_id, tables in datasets_tables.items():
@@ -196,7 +196,7 @@ async def search_metadata_inner(keyword: str) -> List[SearchResultItem]:
     column_results = _search_table_columns(cached_data, keyword)
 
     # Merge results (check for duplicates across all)
-    all_results = []
+    all_results: List[SearchResultItem] = []
     for result_list in [dataset_results, table_results, column_results]:
         for result in result_list:
             if not _is_duplicate_result(result, all_results):

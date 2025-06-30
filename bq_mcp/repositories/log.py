@@ -3,7 +3,7 @@ from pathlib import Path
 
 from bq_mcp.core.entities import LogSetting
 
-logger = None
+logger: logging.Logger | None = None
 
 
 def get_logger(log_to_console: bool = True) -> logging.Logger:
@@ -13,6 +13,7 @@ def get_logger(log_to_console: bool = True) -> logging.Logger:
     global logger
     if logger is None:
         init_logger()
+    assert logger is not None
     return logger
 
 

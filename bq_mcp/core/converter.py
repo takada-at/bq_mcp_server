@@ -11,7 +11,7 @@ from bq_mcp.core.entities import (
 )
 
 
-def _format_bytes(bytes_count: int) -> str:
+def _format_bytes(bytes_count: int | float) -> str:
     """Format byte count to human-readable format"""
     for unit in ["B", "KB", "MB", "GB", "TB"]:
         if bytes_count < 1024.0:
@@ -27,7 +27,7 @@ def _create_markdown_header(title: str, level: int = 2) -> str:
 
 
 def _add_optional_field(
-    result: List[str], label: str, value: str, format_func=None
+    result: List[str], label: str, value: str | None, format_func=None
 ) -> None:
     """Add optional field to result list if value exists"""
     if value:
@@ -232,7 +232,9 @@ def _create_query_result_table(rows: List[dict]) -> str:
     return table_content
 
 
-def _create_execution_info_section(result, project_id: str, success: bool) -> str:
+def _create_execution_info_section(
+    result, project_id: str | None, success: bool
+) -> str:
     """Create query information section"""
     status_icon = "✅ Success" if success else "❌ Failed"
     return f"""## Query Information
@@ -255,7 +257,7 @@ def _create_resource_usage_section(result) -> str:
 """
 
 
-def _create_error_section(error_message: str) -> str:
+def _create_error_section(error_message: str | None) -> str:
     """Create error details section"""
     return f"""## Error Details
 ```
@@ -271,7 +273,7 @@ def _create_error_section(error_message: str) -> str:
 
 
 def convert_query_result_to_markdown(
-    result: QueryExecutionResult, project_id: str = None
+    result: QueryExecutionResult, project_id: str | None = None
 ) -> str:
     """Convert query execution result to markdown format"""
     markdown_content = "# BigQuery Query Execution Result\n\n"
@@ -326,7 +328,7 @@ def _create_safety_assessment_section(result: QueryDryRunResult) -> str:
 
 
 def convert_dry_run_result_to_markdown(
-    result: QueryDryRunResult, project_id: str = None
+    result: QueryDryRunResult, project_id: str | None = None
 ) -> str:
     """Convert dry run result to markdown format"""
     markdown_content = "# BigQuery Query Scan Amount Check Result\n\n"
