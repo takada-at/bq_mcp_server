@@ -65,17 +65,16 @@ async def test_get_current_cache_loaded_after_none(mock_cache_manager, mock_get_
     mock_cache_manager.is_cache_valid.assert_not_called()
     mock_cache_manager.update_cache.assert_called_once()
     mock_logger.info.assert_any_call(
-        "Cache is invalid or doesn't exist, attempting to update..."
+        "No cache exists, performing initial cache load..."
     )
-    # Removed: mock_logger.warning.assert_any_call("Cache file not found. Triggering update.") (not logged by logic.py)
-    # Removed: mock_logger.info.assert_any_call(f"Cache updated successfully: {updated_cache}") (no such log in logic.py for this path)
 
 
 @pytest.mark.asyncio
+@patch("asyncio.create_task")
 @patch("bq_mcp.core.logic.log.get_logger")
 @patch("bq_mcp.core.logic.cache_manager")
 async def test_get_current_cache_loaded_after_invalid(
-    mock_cache_manager, mock_get_logger
+    mock_cache_manager, mock_get_logger, mock_create_task
 ):
     """Tests get_current_cache when existing cache is invalid and reloaded."""
     # Setup mocks
@@ -97,12 +96,12 @@ async def test_get_current_cache_loaded_after_invalid(
     actual_cache = await logic.get_current_cache()
 
     # Assertions
-    assert actual_cache == updated_cache
+    assert actual_cache == initial_cache  # Should return stale cache
     mock_cache_manager.load_cache.assert_called_once()
     mock_cache_manager.is_cache_valid.assert_called_once_with(initial_cache)
-    mock_cache_manager.update_cache.assert_called_once()
-    mock_logger.info.assert_any_call(
-        "Cache is invalid or doesn't exist, attempting to update..."
+    # Update is called in background, not awaited
+    mock_logger.warning.assert_any_call(
+        "Cache is expired, using stale cache and triggering background update"
     )
     # Removed: mock_logger.warning.assert_any_call(f"Cache is invalid or expired: {initial_cache}. Triggering update.") (not logged by logic.py)
     # Removed: mock_logger.info.assert_any_call(f"Cache updated successfully: {updated_cache}") (no such log in logic.py for this path)
@@ -133,7 +132,7 @@ async def test_get_current_cache_update_fails(mock_cache_manager, mock_get_logge
     mock_cache_manager.load_cache.assert_called_once()
     mock_cache_manager.update_cache.assert_called_once()
     mock_logger.info.assert_any_call(
-        "Cache is invalid or doesn't exist, attempting to update..."
+        "No cache exists, performing initial cache load..."
     )
     # Removed: mock_logger.warning.assert_any_call("Cache file not found. Triggering update.") (not logged by logic.py)
     mock_logger.error.assert_any_call("Failed to update cache.")

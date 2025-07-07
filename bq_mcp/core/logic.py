@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 from typing import List, Optional
 
@@ -22,9 +23,19 @@ async def get_current_cache() -> CachedData:
     cache = cache_manager.load_cache()  # First try from memory/file
     if cache and cache_manager.is_cache_valid(cache):
         return cache
-    # Try to update if cache is invalid or doesn't exist
-    logger.info("Cache is invalid or doesn't exist, attempting to update...")
-    # cache_manager.update_cache() is now async
+
+    # If cache is invalid or doesn't exist, try to return stale cache
+    # and trigger background update
+    if cache:
+        logger.warning(
+            "Cache is expired, using stale cache and triggering background update"
+        )
+        # Start background update without waiting
+        asyncio.create_task(_trigger_background_update())
+        return cache
+
+    # If no cache exists at all, we need to wait for initial update
+    logger.info("No cache exists, performing initial cache load...")
     updated_cache = await cache_manager.update_cache()
     if not updated_cache:
         logger.error("Failed to update cache.")
@@ -33,6 +44,19 @@ async def get_current_cache() -> CachedData:
             detail="Failed to retrieve cache data. Server is unavailable.",
         )
     return updated_cache
+
+
+async def _trigger_background_update():
+    """Trigger background cache update without blocking"""
+    logger = log.get_logger()
+    try:
+        logger.info("Starting background cache update from logic layer")
+        updated_cache = await cache_manager.update_cache()
+        if updated_cache:
+            cache_manager.save_cache(updated_cache)
+            logger.info("Background cache update completed")
+    except Exception:
+        logger.exception("Background cache update failed")
 
 
 async def get_datasets() -> DatasetListResponse:

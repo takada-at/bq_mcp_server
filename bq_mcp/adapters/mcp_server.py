@@ -8,6 +8,7 @@
 #     "mcp[cli]>=1.6.0",
 # ]
 # ///
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -24,14 +25,44 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[ApplicationContext]:
     """Manage application lifecycle with type-safe context"""
     log_setting = log.init_logger(log_to_console=False)
     setting = config.init_setting()
-    cache_data = await cache_manager.get_cached_data()
+    logger = log.get_logger()
+
+    # Load existing cache without blocking startup
+    cache_data = cache_manager.load_cache()
+
+    # If cache is invalid or doesn't exist, start background update
+    if not cache_data or not cache_manager.is_cache_valid(cache_data):
+        logger.info("Starting background cache update...")
+        # Create a background task for cache update
+        asyncio.create_task(_background_cache_update())
+        # Initialize with empty cache to allow immediate startup
+        cache_data = CachedData(last_updated=None)
+    else:
+        logger.info("Using existing valid cache")
+
     context = ApplicationContext(
         settings=setting,
         log_setting=log_setting,
-        cache_data=cache_data or CachedData(last_updated=None),
+        cache_data=cache_data,
     )
 
     yield context
+
+
+async def _background_cache_update():
+    """Background task to update cache without blocking server startup"""
+    logger = log.get_logger()
+    try:
+        logger.info("Background cache update started")
+        updated_cache = await cache_manager.update_cache()
+        if updated_cache:
+            logger.info("Background cache update completed successfully")
+            # Save the updated cache
+            cache_manager.save_cache(updated_cache)
+        else:
+            logger.error("Background cache update failed")
+    except Exception:
+        logger.exception("Error in background cache update")
 
 
 mcp = FastMCP(
