@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 from typing import List, Optional
 
@@ -30,8 +31,6 @@ async def get_current_cache() -> CachedData:
             "Cache is expired, using stale cache and triggering background update"
         )
         # Start background update without waiting
-        import asyncio
-
         asyncio.create_task(_trigger_background_update())
         return cache
 
@@ -56,8 +55,8 @@ async def _trigger_background_update():
         if updated_cache:
             cache_manager.save_cache(updated_cache)
             logger.info("Background cache update completed")
-    except Exception as e:
-        logger.error(f"Background cache update failed: {e}")
+    except Exception:
+        logger.exception("Background cache update failed")
 
 
 async def get_datasets() -> DatasetListResponse:

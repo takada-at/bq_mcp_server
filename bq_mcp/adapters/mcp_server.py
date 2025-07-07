@@ -61,8 +61,8 @@ async def _background_cache_update():
             cache_manager.save_cache(updated_cache)
         else:
             logger.error("Background cache update failed")
-    except Exception as e:
-        logger.error(f"Error in background cache update: {e}")
+    except Exception:
+        logger.exception("Error in background cache update")
 
 
 mcp = FastMCP(
