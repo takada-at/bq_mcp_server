@@ -67,7 +67,9 @@ Required environment variables:
                 "mcp_server"
             ],
             "env": {
-                "PYTHONPATH": "<your install directory>"
+                "PYTHONPATH": "<your install directory>",
+                "PROJECT_IDS": "<your project id>",
+                "QUERY_EXECUTION_PROJECT_ID": "<your project id>"
             }
         }
     }

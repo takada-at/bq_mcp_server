@@ -153,6 +153,7 @@ async def get_dataset_detail(
 async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetadata]:
     """Asynchronously retrieve list of datasets for specified project. Supports pagination."""
     logger = log.get_logger()
+    settings = config.get_settings()
 
     async def list_datasets_api(params: Dict[str, Any]) -> Dict[str, Any]:
         """Internal function to call dataset list API"""
@@ -184,6 +185,18 @@ async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetada
         if not actual_dataset_id:
             logger.warning(f"Skipping because dataset ID not found: {dataset_data}")
             continue
+
+        # Check dataset filter before proceeding with expensive operations
+        if settings.dataset_filters:
+            from bq_mcp.repositories.config import should_include_dataset
+
+            if not should_include_dataset(
+                actual_project_id, actual_dataset_id, settings.dataset_filters
+            ):
+                logger.debug(
+                    f"Skipping dataset {actual_project_id}.{actual_dataset_id} due to filter"
+                )
+                continue
 
         description = dataset_data.get("description")
         dataset = Dataset(
