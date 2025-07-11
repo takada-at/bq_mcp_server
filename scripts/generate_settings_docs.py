@@ -6,10 +6,9 @@ documentation file for all settings and their corresponding environment variable
 """
 
 import ast
-import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 # Add the parent directory to the Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -139,8 +138,6 @@ def parse_mcp_server() -> Tuple[List[Dict[str, any]], Dict[str, str]]:
 def get_env_var_info() -> Dict[str, Dict[str, any]]:
     """Get environment variable information from entities.py Settings class"""
     entities_path = Path(__file__).parent.parent / "bq_mcp" / "core" / "entities.py"
-
-    env_vars = {}
 
     # Parse entities.py to find Settings class
     with open(entities_path, "r", encoding="utf-8") as f:
@@ -325,7 +322,7 @@ def generate_documentation(
             # Format default value for display
             env_default = env_info.get("default")
             if env_default == "...":
-                lines.append(f"  - Default: Required (no default value)")
+                lines.append("  - Default: Required (no default value)")
             elif env_default is not None:
                 if (
                     isinstance(env_default, int)
@@ -342,7 +339,7 @@ def generate_documentation(
                 ):
                     lines.append(f"  - Default: `{env_default} seconds`")
                 elif isinstance(env_default, list) and len(env_default) == 0:
-                    lines.append(f"  - Default: `[]`")
+                    lines.append("  - Default: `[]`")
                 else:
                     lines.append(f"  - Default: `{env_default}`")
             lines.append("")
