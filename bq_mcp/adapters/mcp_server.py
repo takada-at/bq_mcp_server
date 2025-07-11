@@ -28,8 +28,8 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[ApplicationContext]:
     log_setting = log.init_logger(
         log_to_console=False,
         # Enable file logging based on environment variable
-        # We cannnot use settings here because it is not initialized yet
-        enable_file_log=bool(os.getenv("ENABLE_FILE_LOGGING", None)),
+        # We cannot use settings here because it is not initialized yet
+        enable_file_log=os.getenv("ENABLE_FILE_LOGGING", "").lower() in ("1", "true"),
     )
     setting = config.init_setting()
     logger = log.get_logger()

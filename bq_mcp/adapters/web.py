@@ -26,8 +26,8 @@ async def lifespan(app: FastAPI):
     """Manage application lifecycle events"""
     log_setting = log.init_logger(
         # Enable file logging based on environment variable
-        # We cannnot use settings here because it is not initialized yet
-        enable_file_log=bool(os.getenv("ENABLE_FILE_LOGGING", None))
+        # We cannot use settings here because it is not initialized yet
+        enable_file_log=os.getenv("ENABLE_FILE_LOGGING", "").lower() in ("1", "true")
     )
     settings = config.init_setting()
     cache_data = await cache_manager.get_cached_data()
