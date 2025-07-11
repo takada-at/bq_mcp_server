@@ -196,6 +196,28 @@ class TestQueryExecutor:
             assert result.success is False
             assert "BigQuery error" in result.error_message
 
+    @pytest.mark.asyncio
+    async def test_execute_query_dry_run_error(self, query_executor):
+        """Test that dry run errors are properly propagated instead of being masked as scan limit errors"""
+        with patch.object(query_executor, "check_scan_amount") as mock_check_scan:
+            # Mock scan amount check to return an error (like table not found)
+            mock_check_scan.return_value = QueryDryRunResult(
+                total_bytes_processed=0,
+                total_bytes_billed=0,
+                is_safe=False,
+                modified_sql="SELECT * FROM nonexistent_table LIMIT 10",
+                error_message="Table not found: nonexistent_table",
+            )
+
+            sql = "SELECT * FROM nonexistent_table"
+            result = await query_executor.execute_query(sql)
+
+            assert isinstance(result, QueryExecutionResult)
+            assert result.success is False
+            # Should return the actual BigQuery error, not the scan limit error
+            assert result.error_message == "Table not found: nonexistent_table"
+            assert "Query scan amount exceeds limit" not in result.error_message
+
     def test_format_bytes(self, query_executor):
         """Test byte formatting utility"""
         assert query_executor.format_bytes(500) == "500.0 B"

@@ -17,9 +17,9 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from bq_mcp.core import converter, logic
+from bq_mcp.core import converter
 from bq_mcp.core.entities import ApplicationContext, CachedData
-from bq_mcp.repositories import cache_manager, config, log, search_engine
+from bq_mcp.repositories import cache_manager, config, log, logic, search_engine
 
 
 @asynccontextmanager
@@ -131,7 +131,7 @@ async def execute_query(sql: str, project_id: Optional[str] = None):
         project_id: Optional project ID to use for the query (defaults to first configured project)
     """
     # Force execution flag is always set to False. No workarounds allowed in MCP.
-    result = await logic.execute_query(sql, project_id, force=False)
+    result = await logic.execute_query(sql, project_id)
     return converter.convert_query_result_to_markdown(result, project_id)
 
 

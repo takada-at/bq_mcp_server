@@ -1,23 +1,19 @@
+"""Repository layer logic with dependency injection"""
+
 import asyncio
 import traceback
 from typing import List, Optional
 
 from fastapi import HTTPException
 
-from bq_mcp.core.entities import (
-    CachedData,
-    DatasetListResponse,
-    DatasetMetadata,
-    QueryDryRunResult,
-    QueryExecutionResult,
-    TableMetadata,
-)
+from bq_mcp.core import logic_base
+from bq_mcp.core.entities import CachedData, DatasetListResponse, TableMetadata
 from bq_mcp.repositories import cache_manager, config, log
 from bq_mcp.repositories.query_executor import QueryExecutor
 
 
-# --- Helper Functions ---
-async def get_current_cache() -> CachedData:
+# --- Private implementation functions ---
+async def _get_current_cache_impl() -> CachedData:
     """Get current valid cache data. Raise error if not available."""
     logger = log.get_logger()
     cache = cache_manager.load_cache()  # First try from memory/file
@@ -59,16 +55,62 @@ async def _trigger_background_update():
         logger.exception("Background cache update failed")
 
 
+# --- QueryExecutor wrapper functions ---
+async def _check_scan_amount_impl(sql: str, project_id: Optional[str] = None):
+    """Check query scan amount using QueryExecutor"""
+    settings = config.get_settings()
+    query_executor = QueryExecutor(settings)
+    return await query_executor.check_scan_amount(sql, project_id)
+
+
+async def _execute_query_impl(sql: str, project_id: Optional[str] = None):
+    """Execute query using QueryExecutor"""
+    settings = config.get_settings()
+    query_executor = QueryExecutor(settings)
+    return await query_executor.execute_query(sql, project_id, force_execute=False)
+
+
+# --- Logger functions ---
+def _logger_info(message: str):
+    """Log info message"""
+    log.get_logger().info(message)
+
+
+def _logger_warning(message: str):
+    """Log warning message"""
+    log.get_logger().warning(message)
+
+
+# --- Create public functions with dependency injection ---
+_get_datasets_impl = logic_base.create_get_datasets(
+    get_current_cache=_get_current_cache_impl
+)
+
+_get_datasets_by_project_impl = logic_base.create_get_datasets_by_project(
+    get_current_cache=_get_current_cache_impl
+)
+
+_get_tables_impl = logic_base.create_get_tables(
+    get_cached_dataset_data=cache_manager.get_cached_dataset_data,
+    get_current_cache=_get_current_cache_impl,
+    get_project_ids=lambda: config.get_settings().project_ids,
+)
+
+check_query_scan_amount = logic_base.create_check_query_scan_amount(
+    check_scan_amount=_check_scan_amount_impl, logger=_logger_info
+)
+
+execute_query = logic_base.create_execute_query(
+    execute_query_impl=_execute_query_impl, logger=_logger_info
+)
+
+
+# --- Public API with error handling ---
 async def get_datasets() -> DatasetListResponse:
-    """Return list of datasets from all projects"""
-    # Get dataset list from global cache
+    """Return list of datasets from all projects with error handling"""
     logger = log.get_logger()
     try:
-        cache = await get_current_cache()
-        all_datasets: List[DatasetMetadata] = []
-        for project_datasets in cache.datasets.values():
-            all_datasets.extend(project_datasets)
-        return DatasetListResponse(datasets=all_datasets)
+        return await _get_datasets_impl()
     except HTTPException:  # Specific HTTPException should be re-raised
         raise
     except Exception as e:
@@ -81,94 +123,49 @@ async def get_datasets() -> DatasetListResponse:
 
 
 async def get_datasets_by_project(project_id: str) -> DatasetListResponse:
-    """Return list of datasets for the specified project"""
-    cache = await get_current_cache()
-    if project_id not in cache.datasets:
+    """Return list of datasets for the specified project with error handling"""
+    result = await _get_datasets_by_project_impl(project_id)
+    if not result.datasets:
         raise HTTPException(
             status_code=404,
             detail=f"Project '{project_id}' not found.",
         )
-    return DatasetListResponse(datasets=cache.datasets[project_id])
+    return result
 
 
 async def get_tables(
     dataset_id: str, project_id: Optional[str] = None
 ) -> List[TableMetadata]:
-    """Return list of tables for the specified dataset
+    """Return list of tables for the specified dataset with error handling
+
     Args:
         dataset_id: Dataset ID
         project_id: Project ID (optional)
+
     Returns:
         List[TableMetadata]: List of table metadata
+
     Raises:
         HTTPException: When project or dataset is not found
     """
-    found_tables: List[TableMetadata] = []
-    if project_id:
-        # If project ID is specified, get cache for that dataset directly
-        # cache_manager.get_cached_dataset_data is now async
-        dataset, tables = await cache_manager.get_cached_dataset_data(
-            project_id, dataset_id
-        )
-        if dataset is None:
+    tables = await _get_tables_impl(dataset_id, project_id)
+
+    if not tables:
+        if project_id:
             raise HTTPException(
                 status_code=404,
                 detail=f"Dataset '{project_id}.{dataset_id}' not found.",
             )
-        return tables
-    else:
-        # If project ID is not specified, search across all projects
-        cache = await get_current_cache()
-        found_dataset = False
-        settings = config.get_settings()
-
-        for proj_id in settings.project_ids:
-            if proj_id in cache.tables and dataset_id in cache.tables[proj_id]:
-                found_dataset = True
-                # cache_manager.get_cached_dataset_data is now async
-                dataset, tables = await cache_manager.get_cached_dataset_data(
-                    proj_id, dataset_id
-                )
-                if dataset is not None and tables:
-                    found_tables.extend(tables)
-
-        if not found_dataset:
+        else:
             raise HTTPException(
                 status_code=404,
                 detail=f"Dataset '{dataset_id}' not found.",
             )
 
-        return found_tables
+    return tables
 
 
-async def check_query_scan_amount(
-    sql: str, project_id: Optional[str] = None
-) -> QueryDryRunResult:
-    """Check BigQuery scan amount in advance (original query as-is)"""
-    logger = log.get_logger()
-    settings = config.get_settings()
-
-    query_executor = QueryExecutor(settings)
-    result = await query_executor.check_scan_amount(sql, project_id)
-
-    logger.info(f"Scan amount check completed: {result.total_bytes_processed:,} bytes")
-    return result
-
-
-async def execute_query(
-    sql: str, project_id: Optional[str] = None, force: bool = False
-) -> QueryExecutionResult:
-    """Execute BigQuery query safely"""
-
-    logger = log.get_logger()
-    settings = config.get_settings()
-
-    query_executor = QueryExecutor(settings)
-    result = await query_executor.execute_query(sql, project_id, force_execute=force)
-
-    if result.success:
-        logger.info(f"Query execution successful - result rows: {result.total_rows}")
-    else:
-        logger.warning(f"Query execution failed: {result.error_message}")
-
-    return result
+# Helper function for backward compatibility
+async def get_current_cache() -> CachedData:
+    """Get current valid cache data. For backward compatibility."""
+    return await _get_current_cache_impl()
