@@ -14,6 +14,7 @@ from bq_mcp.core.entities import (
     TableSchema,
 )
 from bq_mcp.repositories import config, log
+from bq_mcp.repositories.config import should_include_dataset
 
 
 def get_bigquery_client() -> Optional[Dataset]:
@@ -188,8 +189,6 @@ async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetada
 
         # Check dataset filter before proceeding with expensive operations
         if settings.dataset_filters:
-            from bq_mcp.repositories.config import should_include_dataset
-
             if not should_include_dataset(
                 actual_project_id, actual_dataset_id, settings.dataset_filters
             ):

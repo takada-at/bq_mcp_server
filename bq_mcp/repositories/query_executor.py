@@ -25,7 +25,7 @@ class QueryExecutor:
     def _get_client(self, project_id: Optional[str] = None) -> bigquery.Client:
         """Get BigQuery client"""
         if self.client is None:
-            # Use query execution project ID if set, otherwise fall back to provided project_id or first project
+            # Priority order: query_execution_project_id > provided project_id > first project in settings
             effective_project_id = (
                 self.settings.query_execution_project_id
                 or project_id

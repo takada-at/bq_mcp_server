@@ -14,7 +14,10 @@ class TestDatasetFilterOptimization:
 
     def test_should_include_dataset_basic_scenarios(self):
         """Test basic scenarios for dataset filtering"""
-        # Test cases that we ran manually
+        # Test cases validating basic dataset filtering scenarios, including:
+        # - Matching and non-matching filters
+        # - Wildcard patterns
+        # - Cases with no filters
         test_cases = [
             ("project1", "dataset1", ["project1.*"], True),
             ("project1", "dataset1", ["project2.*"], False),
@@ -31,7 +34,7 @@ class TestDatasetFilterOptimization:
 
     def test_should_include_dataset_wildcard_patterns(self):
         """Test wildcard pattern matching"""
-        # Patterns from actual configuration
+        # Test patterns representing common real-world dataset filter configurations
         filters = [
             "prj-ai-chatbot.*",
             "pj-cloud-gorillatest.*",
