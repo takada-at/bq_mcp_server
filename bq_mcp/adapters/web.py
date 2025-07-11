@@ -23,8 +23,8 @@ from bq_mcp.repositories import cache_manager, config, log, logic, search_engine
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle events"""
-    log_setting = log.init_logger()
     settings = config.init_setting()
+    log_setting = log.init_logger(enable_file_log=settings.enable_file_logging)
     cache_data = await cache_manager.get_cached_data()
     ApplicationContext(
         settings=settings,

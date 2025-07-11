@@ -10,6 +10,9 @@ class LogSetting(BaseModel):
     """Model indicating log configuration completion"""
 
     log_to_console: bool = Field(False, description="Whether to output logs to console")
+    enable_file_logging: bool = Field(
+        False, description="Whether to enable file logging"
+    )
 
 
 class ColumnSchema(BaseModel):
@@ -191,6 +194,10 @@ class Settings(BaseModel):
     query_timeout_seconds: int = Field(
         300,  # 5 minutes
         description="Query timeout in seconds",
+    )
+    # Logging settings
+    enable_file_logging: bool = Field(
+        False, description="Whether to enable file logging"
     )
 
 

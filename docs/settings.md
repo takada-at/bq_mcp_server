@@ -92,7 +92,8 @@ The following environment variables are used by the BQ MCP server:
 | `CACHE_TTL_SECONDS` | Cache TTL in seconds | int | `3600 seconds` |
 | `DATASET_FILTERS` | Comma-separated list of dataset filters (e.g., 'project1.*,project2.dataset1') | list[str] | `None` |
 | `DEFAULT_QUERY_LIMIT` | Default query result limit | int | `100` |
-| `GCP_SERVICE_ACCOUNT_KEY_PATH` | Path to GCP service account JSON key file | str | `None` |
+| `ENABLE_FILE_LOGGING` | Whether to enable file logging | bool | `False` |
+| `GCP_SERVICE_ACCOUNT_KEY_PATH` | Path to GCP service account JSON key file (uses Application Default Credentials by default) | str | `None` |
 | `MAX_SCAN_BYTES` | Maximum scan bytes for queries | int | `1GB (1,073,741,824 bytes)` |
 | `PROJECT_IDS` | Comma-separated list of GCP project IDs (e.g., 'project1,project2') | list[str] | `Required` |
 | `QUERY_EXECUTION_PROJECT_ID` | Project ID to use for query execution (defaults to first project in project-ids) | str | `None` |
