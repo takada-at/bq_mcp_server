@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi import Path as FastApiPath
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 
-from bq_mcp.core import converter, logic
+from bq_mcp.core import converter
 from bq_mcp.core.entities import (
     ApplicationContext,
     CachedData,
@@ -17,7 +17,7 @@ from bq_mcp.core.entities import (
     TableListResponse,
     TableMetadata,
 )
-from bq_mcp.repositories import cache_manager, config, log, search_engine
+from bq_mcp.repositories import cache_manager, config, log, logic, search_engine
 
 
 @asynccontextmanager

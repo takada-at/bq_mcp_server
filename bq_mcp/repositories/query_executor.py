@@ -146,14 +146,31 @@ class QueryExecutor:
             # Dry run check (only when force_execute is False)
             if not force_execute:
                 dry_run_result = await self.check_scan_amount(modified_sql, project_id)
-                if not dry_run_result.is_safe:
+
+                # If dry run has an error, return the actual error message instead of scan limit message
+                if dry_run_result.error_message:
+                    execution_time_ms = int((time.time() - start_time) * 1000)
                     return QueryExecutionResult(
                         success=False,
                         rows=None,
                         total_rows=None,
                         total_bytes_processed=None,
                         total_bytes_billed=None,
-                        execution_time_ms=None,
+                        execution_time_ms=execution_time_ms,
+                        job_id=None,
+                        error_message=dry_run_result.error_message,
+                    )
+
+                # If dry run is successful but scan amount exceeds limit
+                if not dry_run_result.is_safe:
+                    execution_time_ms = int((time.time() - start_time) * 1000)
+                    return QueryExecutionResult(
+                        success=False,
+                        rows=None,
+                        total_rows=None,
+                        total_bytes_processed=None,
+                        total_bytes_billed=None,
+                        execution_time_ms=execution_time_ms,
                         job_id=None,
                         error_message=(
                             f"Query scan amount exceeds limit. "
