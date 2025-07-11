@@ -63,13 +63,11 @@ async def _check_scan_amount_impl(sql: str, project_id: Optional[str] = None):
     return await query_executor.check_scan_amount(sql, project_id)
 
 
-async def _execute_query_impl(
-    sql: str, project_id: Optional[str] = None, force: bool = False
-):
+async def _execute_query_impl(sql: str, project_id: Optional[str] = None):
     """Execute query using QueryExecutor"""
     settings = config.get_settings()
     query_executor = QueryExecutor(settings)
-    return await query_executor.execute_query(sql, project_id, force_execute=force)
+    return await query_executor.execute_query(sql, project_id, force_execute=False)
 
 
 # --- Logger functions ---

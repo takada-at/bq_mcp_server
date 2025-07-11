@@ -18,7 +18,7 @@ GetCachedDatasetFunc = Callable[
 ]
 GetProjectIdsFunc = Callable[[], List[str]]
 CheckScanAmountFunc = Callable[[str, Optional[str]], Awaitable[QueryDryRunResult]]
-ExecuteQueryFunc = Callable[[str, Optional[str], bool], Awaitable[QueryExecutionResult]]
+ExecuteQueryFunc = Callable[[str, Optional[str]], Awaitable[QueryExecutionResult]]
 LoggerFunc = Callable[[str], None]
 
 
@@ -113,14 +113,15 @@ def create_check_query_scan_amount(
 
 def create_execute_query(
     execute_query_impl: ExecuteQueryFunc, logger: LoggerFunc
-) -> Callable[[str, Optional[str], bool], Awaitable[QueryExecutionResult]]:
+) -> Callable[[str, Optional[str]], Awaitable[QueryExecutionResult]]:
     """Create execute_query function with injected dependencies"""
 
     async def execute_query(
-        sql: str, project_id: Optional[str] = None, force: bool = False
+        sql: str,
+        project_id: Optional[str] = None,
     ) -> QueryExecutionResult:
         """Execute BigQuery query safely"""
-        result = await execute_query_impl(sql, project_id, force)
+        result = await execute_query_impl(sql, project_id)
 
         if result.success:
             logger(f"Query execution successful - result rows: {result.total_rows}")

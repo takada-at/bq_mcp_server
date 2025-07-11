@@ -210,7 +210,7 @@ async def force_update_cache():
 async def execute_query(request: QueryExecutionRequest):
     """Execute BigQuery query safely"""
     try:
-        result = await logic.execute_query(request.sql, request.project_id, False)
+        result = await logic.execute_query(request.sql, request.project_id)
         return result
     except HTTPException as e:
         raise e
