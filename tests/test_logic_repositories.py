@@ -321,12 +321,12 @@ class TestQueryFunctions:
         mock_executor.execute_query = AsyncMock(return_value=expected_result)
 
         # Act
-        result = await logic.execute_query("SELECT 1", force=True)
+        result = await logic.execute_query("SELECT 1")
 
         # Assert
         assert result == expected_result
         mock_executor.execute_query.assert_called_once_with(
-            "SELECT 1", None, force_execute=True
+            "SELECT 1", None, force_execute=False
         )
 
 

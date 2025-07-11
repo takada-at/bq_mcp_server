@@ -289,11 +289,11 @@ class TestExecuteQuery:
         execute_query = logic_base.create_execute_query(mock_execute, mock_logger)
 
         # Act
-        result = await execute_query("SELECT * FROM table", "project1", force=True)
+        result = await execute_query("SELECT * FROM table", "project1")
 
         # Assert
         assert result == expected_result
-        mock_execute.assert_called_once_with("SELECT * FROM table", "project1", True)
+        mock_execute.assert_called_once_with("SELECT * FROM table", "project1")
         mock_logger.assert_called_once_with(
             "Query execution successful - result rows: 1"
         )
