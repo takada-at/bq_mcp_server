@@ -50,7 +50,7 @@ GetCurrentCacheFunc = Callable[[], Awaitable[CachedData]]
 GetCachedDatasetFunc = Callable[[str, str], Awaitable[Tuple[Optional[DatasetMetadata], List[TableMetadata]]]]
 GetProjectIdsFunc = Callable[[], List[str]]
 CheckScanAmountFunc = Callable[[str, Optional[str]], Awaitable[QueryDryRunResult]]
-ExecuteQueryFunc = Callable[[str, Optional[str], bool], Awaitable[QueryExecutionResult]]
+ExecuteQueryFunc = Callable[[str, Optional[str]], Awaitable[QueryExecutionResult]]
 LoggerFunc = Callable[[str], None]
 
 def create_get_datasets(
@@ -113,14 +113,13 @@ def create_check_query_scan_amount(
 def create_execute_query(
     execute_query_impl: ExecuteQueryFunc,
     logger: LoggerFunc
-) -> Callable[[str, Optional[str], bool], Awaitable[QueryExecutionResult]]:
+) -> Callable[[str, Optional[str]], Awaitable[QueryExecutionResult]]:
     """クエリ実行関数を生成"""
     async def execute_query(
         sql: str,
         project_id: Optional[str] = None,
-        force: bool = False
     ) -> QueryExecutionResult:
-        result = await execute_query_impl(sql, project_id, force)
+        result = await execute_query_impl(sql, project_id)
         
         if result.success:
             logger(f"Query execution successful - result rows: {result.total_rows}")
@@ -190,12 +189,11 @@ async def _check_scan_amount_impl(sql: str, project_id: Optional[str] = None):
 
 async def _execute_query_impl(
     sql: str, 
-    project_id: Optional[str] = None, 
-    force: bool = False
+    project_id: Optional[str] = None
 ):
     settings = config.get_settings()
     query_executor = QueryExecutor(settings)
-    return await query_executor.execute_query(sql, project_id, force_execute=force)
+    return await query_executor.execute_query(sql, project_id, force_execute=False)
 
 # ロガー関数
 def _logger_info(message: str):
