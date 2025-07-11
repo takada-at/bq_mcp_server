@@ -25,15 +25,20 @@ class QueryExecutor:
     def _get_client(self, project_id: Optional[str] = None) -> bigquery.Client:
         """Get BigQuery client"""
         if self.client is None:
+            # Priority order: query_execution_project_id > provided project_id > first project in settings
+            effective_project_id = (
+                self.settings.query_execution_project_id
+                or project_id
+                or self.settings.project_ids[0]
+            )
+
             if self.settings.gcp_service_account_key_path:
                 self.client = bigquery.Client.from_service_account_json(
                     self.settings.gcp_service_account_key_path,
-                    project=project_id or self.settings.project_ids[0],
+                    project=effective_project_id,
                 )
             else:
-                self.client = bigquery.Client(
-                    project=project_id or self.settings.project_ids[0]
-                )
+                self.client = bigquery.Client(project=effective_project_id)
         assert self.client is not None
         return self.client
 

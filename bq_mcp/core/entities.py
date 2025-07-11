@@ -179,6 +179,10 @@ class Settings(BaseModel):
     api_port: int = Field(8000, description="API server port number")
 
     # Query execution settings
+    query_execution_project_id: Optional[str] = Field(
+        None,
+        description="Project ID to use for query execution (defaults to first project in project_ids if not set)",
+    )
     max_scan_bytes: int = Field(
         1024 * 1024 * 1024,  # 1GB
         description="Maximum scan bytes for queries",

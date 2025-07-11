@@ -76,6 +76,7 @@ def init_setting() -> Settings:
     api_port = _load_env_variable("API_PORT", 8000, int)
 
     # Query execution settings
+    query_execution_project_id = _load_env_variable("QUERY_EXECUTION_PROJECT_ID")
     max_scan_bytes = _load_env_variable(
         "MAX_SCAN_BYTES", 1024 * 1024 * 1024, int
     )  # 1GB
@@ -92,6 +93,7 @@ def init_setting() -> Settings:
         cache_file_base_dir=cache_file_base_dir,
         api_host=api_host,
         api_port=api_port,
+        query_execution_project_id=query_execution_project_id,
         max_scan_bytes=max_scan_bytes,
         default_query_limit=default_query_limit,
         query_timeout_seconds=query_timeout_seconds,

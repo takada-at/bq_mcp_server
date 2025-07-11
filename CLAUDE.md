@@ -8,11 +8,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pytest` - Run all tests
 - `pytest tests/test_logic.py` - Run specific test file
 - `pytest -k test_function_name` - Run specific test
+- `pytest --cov=bq_mcp` - Run tests with coverage report
+- `pytest -v` - Run tests with verbose output
 
 ### Code Quality
 - `ruff check` - Run linting checks
 - `ruff format` - Format code
 - `lizard` - Run cyclomatic complexity analysis
+- `mypy bq_mcp/` - Run type checking
 
 ### Package Management
 - Uses `uv` for dependency management
@@ -63,11 +66,12 @@ This is a BigQuery metadata API server that provides access to BigQuery dataset,
 **Configuration**: Uses environment variables for GCP authentication and project configuration. Check `repositories/config.py` for available settings.
 
 ### MCP Server Usage
-The MCP server (`mcp_server.py`) is the primary interface, providing four main tools for BigQuery metadata access and query execution:
+The MCP server (`mcp_server.py`) is the primary interface, providing five main tools for BigQuery metadata access and query execution:
 1. `get_datasets` - Lists all available datasets across configured projects
 2. `get_tables` - Lists tables in a specific dataset (requires dataset_id, optional project_id)
 3. `search_metadata` - Searches across datasets, tables, and columns using keywords
-4. `execute_query` - Executes BigQuery SQL with automatic safety checks and LIMIT clause management
+4. `check_query_scan_amount` - Dry-run to check query cost before execution
+5. `execute_query` - Executes BigQuery SQL with automatic safety checks and LIMIT clause management
 
 **Query Execution Features:**
 - Automatic LIMIT clause addition/modification (default: 10 rows)
@@ -94,3 +98,15 @@ Run the MCP server with: `python -m bq_mcp.adapters.mcp_server`
 ### Debugging MCP Issues
 - Check log files in `logs/` directory for debugging information
 - Test with web API (`bq_mcp.adapters.web`) as alternative to stdio MCP for development
+
+### Environment Setup
+Required environment variable:
+- `PROJECT_IDS` - Comma-separated list of GCP project IDs (e.g., "project1,project2")
+
+The application uses Google Cloud Application Default Credentials (ADC) by default. You can also specify:
+- `GCP_SERVICE_ACCOUNT_KEY_PATH` - Path to service account JSON key file
+
+### Running the Application
+- MCP Server: `python -m bq_mcp.adapters.mcp_server`
+- Web API: `python -m bq_mcp.adapters.web` (runs on http://localhost:8080)
+- Gradio UI: `python -m bq_mcp.adapters.bq_agent_gradio`

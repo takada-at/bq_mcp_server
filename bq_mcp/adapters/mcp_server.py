@@ -8,7 +8,9 @@
 #     "mcp[cli]>=1.6.0",
 # ]
 # ///
+import argparse
 import asyncio
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -133,10 +135,64 @@ async def execute_query(sql: str, project_id: Optional[str] = None):
     return converter.convert_query_result_to_markdown(result, project_id)
 
 
+def parse_args():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(
+        description="BigQuery MCP Server - Provides access to BigQuery metadata and query execution"
+    )
+    parser.add_argument(
+        "--gcp-service-account-key-path",
+        help="Path to GCP service account JSON key file",
+    )
+    parser.add_argument(
+        "--project-ids",
+        help="Comma-separated list of GCP project IDs (e.g., 'project1,project2')",
+    )
+    parser.add_argument(
+        "--dataset-filters",
+        help="Comma-separated list of dataset filters (e.g., 'project1.*,project2.dataset1')",
+    )
+    parser.add_argument(
+        "--cache-ttl-seconds",
+        type=int,
+        help="Cache TTL in seconds (default: 3600)",
+    )
+    parser.add_argument(
+        "--cache-file-base-dir",
+        help="Base directory for cache files",
+    )
+    parser.add_argument(
+        "--query-execution-project-id",
+        help="Project ID to use for query execution (defaults to first project in project-ids)",
+    )
+    return parser.parse_args()
+
+
+def apply_args_to_env(args):
+    """Apply command line arguments to environment variables (args take priority)"""
+    if args.gcp_service_account_key_path:
+        os.environ["GCP_SERVICE_ACCOUNT_KEY_PATH"] = args.gcp_service_account_key_path
+    if args.project_ids:
+        os.environ["PROJECT_IDS"] = args.project_ids
+    if args.dataset_filters:
+        os.environ["DATASET_FILTERS"] = args.dataset_filters
+    if args.cache_ttl_seconds is not None:
+        os.environ["CACHE_TTL_SECONDS"] = str(args.cache_ttl_seconds)
+    if args.cache_file_base_dir:
+        os.environ["CACHE_FILE_BASE_DIR"] = args.cache_file_base_dir
+    if args.query_execution_project_id:
+        os.environ["QUERY_EXECUTION_PROJECT_ID"] = args.query_execution_project_id
+
+
 def main():
     """
     Main entry point to run the MCP server.
     """
+    # Parse command line arguments and apply them to environment
+    args = parse_args()
+    apply_args_to_env(args)
+
+    # Run the MCP server
     mcp.run()
 
 
