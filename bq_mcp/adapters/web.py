@@ -1,4 +1,5 @@
 # main.py: FastAPI application entry point
+import os
 from contextlib import asynccontextmanager
 from typing import List, Literal, Optional
 
@@ -23,8 +24,12 @@ from bq_mcp.repositories import cache_manager, config, log, logic, search_engine
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle events"""
+    log_setting = log.init_logger(
+        # Enable file logging based on environment variable
+        # We cannnot use settings here because it is not initialized yet
+        enable_file_log=bool(os.getenv("ENABLE_FILE_LOGGING", None))
+    )
     settings = config.init_setting()
-    log_setting = log.init_logger(enable_file_log=settings.enable_file_logging)
     cache_data = await cache_manager.get_cached_data()
     ApplicationContext(
         settings=settings,

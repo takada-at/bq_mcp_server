@@ -25,10 +25,13 @@ from bq_mcp.repositories import cache_manager, config, log, logic, search_engine
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator[ApplicationContext]:
     """Manage application lifecycle with type-safe context"""
-    setting = config.init_setting()
     log_setting = log.init_logger(
-        log_to_console=False, enable_file_log=setting.enable_file_logging
+        log_to_console=False,
+        # Enable file logging based on environment variable
+        # We cannnot use settings here because it is not initialized yet
+        enable_file_log=bool(os.getenv("ENABLE_FILE_LOGGING", None)),
     )
+    setting = config.init_setting()
     logger = log.get_logger()
 
     # Load existing cache without blocking startup

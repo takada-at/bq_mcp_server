@@ -72,17 +72,15 @@ class TestDatasetFilterOptimization:
         mock_client.session.session = MagicMock()
         mock_client.token = MagicMock()
 
-        # Mock dataset list response
+        # Mock dataset list response - descriptions are always None in initial list
         datasets_list = [
             {
                 "datasetReference": {"projectId": "project1", "datasetId": "dataset1"},
                 "location": "US",
-                "description": "Test dataset 1",
             },
             {
                 "datasetReference": {"projectId": "project2", "datasetId": "specific"},
                 "location": "US",
-                # No description - will trigger dataset.get() call
             },
             {
                 "datasetReference": {"projectId": "project2", "datasetId": "other"},
@@ -118,9 +116,9 @@ class TestDatasetFilterOptimization:
                 expected_ids = [("project1", "dataset1"), ("project2", "specific")]
                 assert result_ids == expected_ids
 
-                # Verify dataset.get was called only for included datasets without description
-                # project2.specific has no description, so should call get()
-                mock_get.assert_called_once()
+                # Verify dataset.get was called for all included datasets (2 times)
+                # Since descriptions are always None in initial list, all included datasets need fetching
+                assert mock_get.call_count == 2
 
     @patch("bq_mcp.repositories.config.get_settings")
     @pytest.mark.asyncio
@@ -137,17 +135,15 @@ class TestDatasetFilterOptimization:
         mock_client.session.session = MagicMock()
         mock_client.token = MagicMock()
 
-        # Mock dataset list response - both have descriptions, so no .get() calls needed
+        # Mock dataset list response - descriptions are always None in initial list
         datasets_list = [
             {
                 "datasetReference": {"projectId": "project1", "datasetId": "dataset1"},
                 "location": "US",
-                "description": "Test dataset 1",
             },
             {
                 "datasetReference": {"projectId": "project2", "datasetId": "dataset2"},
                 "location": "US",
-                "description": "Test dataset 2",
             },
         ]
 
@@ -156,8 +152,19 @@ class TestDatasetFilterOptimization:
         ) as mock_paginate:
             mock_paginate.return_value = datasets_list
 
-            # Call the function - no dataset.get() should be called since all have descriptions
-            result = await bigquery_client.fetch_datasets(mock_client, "test_project")
+            # Mock the Dataset.get method
+            with patch(
+                "gcloud.aio.bigquery.Dataset.get", new_callable=AsyncMock
+            ) as mock_get:
+                mock_get.return_value = {"description": "Fetched description"}
+
+                # Call the function - dataset.get() should be called for all datasets
+                result = await bigquery_client.fetch_datasets(
+                    mock_client, "test_project"
+                )
+
+                # Verify dataset.get was called for all datasets (2 times)
+                assert mock_get.call_count == 2
 
             # Should return all datasets
             assert len(result) == 2

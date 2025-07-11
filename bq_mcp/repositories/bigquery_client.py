@@ -7,6 +7,7 @@ from gcloud.aio.auth.token import Token
 from gcloud.aio.bigquery import Dataset, Table
 from google.auth.exceptions import DefaultCredentialsError, RefreshError
 
+from bq_mcp.core.async_funcs import gather_in_batches
 from bq_mcp.core.entities import (
     ColumnSchema,
     DatasetMetadata,
@@ -172,7 +173,9 @@ async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetada
         operation_name=f"Dataset list retrieval (project: {project_id})",
     )
 
-    datasets_metadata = []
+    # Filter datasets and collect info
+    datasets_info = []
+
     for dataset_data in datasets_list:
         # dataset_data is a dict. Example keys: 'kind', 'id', 'datasetReference', 'location'
         # 'id' is usually 'project:dataset'
@@ -197,26 +200,42 @@ async def fetch_datasets(client: Dataset, project_id: str) -> List[DatasetMetada
                 )
                 continue
 
-        description = dataset_data.get("description")
+        # Store dataset info for processing
+        dataset_info = {
+            "project_id": actual_project_id,
+            "dataset_id": actual_dataset_id,
+            "location": dataset_data.get("location"),
+        }
+        datasets_info.append(dataset_info)
+
+    # Create coroutines for fetching dataset details
+    fetch_tasks = []
+    for dataset_info in datasets_info:
         dataset = Dataset(
-            dataset_name=actual_dataset_id,
-            project=actual_project_id,
+            dataset_name=dataset_info["dataset_id"],
+            project=dataset_info["project_id"],
             session=client.session.session,  # type: ignore
             token=client.token,
         )
-        if description is None:
-            full_dataset_details = await dataset.get(
-                session=client.session  # type: ignore
-            )  # This will fetch the dataset details
-            description = full_dataset_details.get("description")
+        fetch_tasks.append(dataset.get(session=client.session))  # type: ignore
+
+    # Execute fetches in batches of 3
+    fetch_results = []
+    if fetch_tasks:
+        fetch_results = await gather_in_batches(fetch_tasks, batch_size=3)
+
+    # Create metadata with fetched descriptions
+    datasets_metadata = []
+    for i, dataset_info in enumerate(datasets_info):
+        description = None
+        if i < len(fetch_results):
+            description = fetch_results[i].get("description")
 
         metadata = DatasetMetadata(
-            project_id=actual_project_id,
-            dataset_id=actual_dataset_id,
+            project_id=dataset_info["project_id"],
+            dataset_id=dataset_info["dataset_id"],
             description=description,
-            location=dataset_data.get(
-                "location"
-            ),  # Location should be in list_datasets response
+            location=dataset_info["location"],
         )
         datasets_metadata.append(metadata)
 
@@ -249,6 +268,74 @@ def _parse_schema(schema_fields: List[dict]) -> List[ColumnSchema]:  # Changed t
     return columns
 
 
+def _create_table_metadata(
+    table_info: Dict[str, str], table_details: Dict[str, Any]
+) -> TableMetadata:
+    """Create TableMetadata from table info and details.
+
+    Args:
+        table_info: Dictionary containing project_id, dataset_id, table_id, full_table_id
+        table_details: Raw table details from BigQuery API
+
+    Returns:
+        TableMetadata object
+    """
+    logger = log.get_logger()
+    full_table_id = table_info["full_table_id"]
+
+    # Parse schema
+    schema_model = None
+    bq_schema_fields = table_details.get("schema", {}).get("fields")
+    if bq_schema_fields:
+        parsed_columns = _parse_schema(bq_schema_fields)
+        schema_model = TableSchema(columns=parsed_columns)
+
+    # Convert time values (milliseconds since epoch string) to datetime objects
+    created_time_ms_str = table_details.get("creationTime")
+    last_modified_time_ms_str = table_details.get("lastModifiedTime")
+
+    created_dt = None
+    if created_time_ms_str:
+        try:
+            created_dt = datetime.fromtimestamp(
+                int(created_time_ms_str) / 1000, tz=timezone.utc
+            )
+        except (ValueError, TypeError) as e_ts:
+            logger.warning(
+                f"Could not parse creationTime '{created_time_ms_str}' for table {full_table_id}: {e_ts}"
+            )
+
+    modified_dt = None
+    if last_modified_time_ms_str:
+        try:
+            modified_dt = datetime.fromtimestamp(
+                int(last_modified_time_ms_str) / 1000, tz=timezone.utc
+            )
+        except (ValueError, TypeError) as e_ts:
+            logger.warning(
+                f"Could not parse lastModifiedTime '{last_modified_time_ms_str}' for table {full_table_id}: {e_ts}"
+            )
+
+    num_rows_val = table_details.get("numRows")
+    num_bytes_val = table_details.get("numBytes")
+
+    metadata = TableMetadata(
+        project_id=table_info["project_id"],
+        dataset_id=table_info["dataset_id"],
+        table_id=table_info["table_id"],
+        full_table_id=full_table_id,
+        schema_=schema_model,
+        description=table_details.get("description")
+        or table_details.get("friendlyName"),
+        num_rows=int(num_rows_val) if num_rows_val is not None else None,
+        num_bytes=int(num_bytes_val) if num_bytes_val is not None else None,
+        created_time=created_dt,
+        last_modified_time=modified_dt,
+    )
+
+    return metadata
+
+
 async def fetch_tables_and_schemas(
     client: Dataset, project_id: str, dataset_id: str
 ) -> List[TableMetadata]:
@@ -273,7 +360,9 @@ async def fetch_tables_and_schemas(
         operation_name=f"Table list retrieval (dataset: {project_id}.{dataset_id})",
     )
 
-    tables_metadata = []
+    # Filter and collect table information
+    tables_info = []
+
     for table_item_data in tables_list:
         # table_item_data is a dict
         # 'tableReference': {'projectId': 'p', 'datasetId': 'd', 'tableId': 't'}
@@ -285,64 +374,40 @@ async def fetch_tables_and_schemas(
         if not actual_table_id:
             logger.warning(f"Skipping because table ID not found: {table_item_data}")
             continue
+
+        table_info = {
+            "project_id": actual_project_id,
+            "dataset_id": actual_dataset_id,
+            "table_id": actual_table_id,
+            "full_table_id": f"{actual_project_id}.{actual_dataset_id}.{actual_table_id}",
+        }
+        tables_info.append(table_info)
+
+    # Create coroutines for fetching table details
+    fetch_tasks = []
+    for table_info in tables_info:
         table = Table(
-            dataset_name=actual_dataset_id,
-            table_name=actual_table_id,
-            project=actual_project_id,
+            dataset_name=table_info["dataset_id"],
+            table_name=table_info["table_id"],
+            project=table_info["project_id"],
             session=client.session.session,  # type: ignore
             token=client.token,
         )
-        full_table_id = f"{actual_project_id}.{actual_dataset_id}.{actual_table_id}"
-        table_details = await table.get()
-        schema_model = None
-        # Schema is in table_details['schema']['fields']
-        bq_schema_fields = table_details.get("schema", {}).get("fields")
-        if bq_schema_fields:
-            parsed_columns = _parse_schema(bq_schema_fields)
-            schema_model = TableSchema(columns=parsed_columns)
+        fetch_tasks.append(table.get())
 
-        # Convert time values (milliseconds since epoch string) to datetime objects
-        created_time_ms_str = table_details.get("creationTime")
-        last_modified_time_ms_str = table_details.get("lastModifiedTime")
+    # Execute fetches in batches of 3
+    fetch_results = []
+    if fetch_tasks:
+        fetch_results = await gather_in_batches(fetch_tasks, batch_size=3)
 
-        created_dt = None
-        if created_time_ms_str:
-            try:
-                created_dt = datetime.fromtimestamp(
-                    int(created_time_ms_str) / 1000, tz=timezone.utc
-                )
-            except (ValueError, TypeError) as e_ts:
-                logger.warning(
-                    f"Could not parse creationTime '{created_time_ms_str}' for table {full_table_id}: {e_ts}"
-                )
+    # Process results and create metadata
+    tables_metadata = []
+    for i, table_info in enumerate(tables_info):
+        if i >= len(fetch_results):
+            continue
 
-        modified_dt = None
-        if last_modified_time_ms_str:
-            try:
-                modified_dt = datetime.fromtimestamp(
-                    int(last_modified_time_ms_str) / 1000, tz=timezone.utc
-                )
-            except (ValueError, TypeError) as e_ts:
-                logger.warning(
-                    f"Could not parse lastModifiedTime '{last_modified_time_ms_str}' for table {full_table_id}: {e_ts}"
-                )
-
-        num_rows_val = table_details.get("numRows")
-        num_bytes_val = table_details.get("numBytes")
-
-        metadata = TableMetadata(
-            project_id=actual_project_id,
-            dataset_id=actual_dataset_id,
-            table_id=actual_table_id,
-            full_table_id=full_table_id,
-            schema_=schema_model,
-            description=table_details.get("description")
-            or table_details.get("friendlyName"),
-            num_rows=int(num_rows_val) if num_rows_val is not None else None,
-            num_bytes=int(num_bytes_val) if num_bytes_val is not None else None,
-            created_time=created_dt,
-            last_modified_time=modified_dt,
-        )
+        table_details = fetch_results[i]
+        metadata = _create_table_metadata(table_info, table_details)
         tables_metadata.append(metadata)
 
     return tables_metadata
