@@ -84,6 +84,8 @@ def init_setting() -> Settings:
     query_timeout_seconds = _load_env_variable(
         "QUERY_TIMEOUT_SECONDS", 300, int
     )  # 5 minutes
+    # Logging settings
+    enable_file_logging = _load_env_variable("ENABLE_FILE_LOGGING", False, bool)
 
     settings = Settings(
         gcp_service_account_key_path=gcp_service_account_key_path,
@@ -97,6 +99,7 @@ def init_setting() -> Settings:
         max_scan_bytes=max_scan_bytes,
         default_query_limit=default_query_limit,
         query_timeout_seconds=query_timeout_seconds,
+        enable_file_logging=enable_file_logging,
     )
 
     _validate_settings(settings)

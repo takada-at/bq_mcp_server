@@ -42,16 +42,12 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync
 ```
 
-### 環境変数の設定
+### 設定値
 
-```bash
-# .env.exampleを.envにコピーして編集
-cp .env.example .env
-```
+設定値のリストは以下を参照。
 
-必要な環境変数:
+[docs/settings.ja.md](./docs/settings.ja.md)
 
-- `PROJECT_IDS` - GCPプロジェクトIDをカンマ区切りで列挙したリスト
 
 ## MCP設定
 
@@ -68,8 +64,7 @@ cp .env.example .env
             ],
             "env": {
                 "PYTHONPATH": "<your install directory>",
-                "PROJECT_IDS": "<your project id>",
-                "QUERY_EXECUTION_PROJECT_ID": "<your project id>"
+                "PROJECT_IDS": "<your project id>"
             }
         }
     }

@@ -143,6 +143,7 @@ def generate_env_example(env_vars: List[Tuple[str, Any, str]], output_path: Path
             "DEFAULT_QUERY_LIMIT",
             "QUERY_TIMEOUT_SECONDS",
         ],
+        "Logging Settings": ["ENABLE_FILE_LOGGING"],
     }
 
     # Convert environment variables to dictionary
