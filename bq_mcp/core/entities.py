@@ -174,7 +174,7 @@ class Settings(BaseModel):
         ".bq_metadata_cache", description="Cache file storage directory"
     )
 
-    # API server settings (for uvicorn)
+    # API server settings (for uvicorn Web API)
     api_host: str = Field("127.0.0.1", description="API server hostname")
     api_port: int = Field(8000, description="API server port number")
 

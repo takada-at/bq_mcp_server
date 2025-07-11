@@ -142,7 +142,7 @@ def parse_args():
     )
     parser.add_argument(
         "--gcp-service-account-key-path",
-        help="Path to GCP service account JSON key file",
+        help="Path to GCP service account JSON key file(uses Application Default Credentials by default)",
     )
     parser.add_argument(
         "--project-ids",

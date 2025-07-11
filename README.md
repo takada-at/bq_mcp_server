@@ -42,16 +42,12 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync
 ```
 
-### Configuring Environment Variables
+### Configuring Option
 
-```bash
-# Copy and edit .env.example to create .env
-cp .env.example .env
-```
+For a list of configuration values, see:
 
-Required environment variables:
+[docs/settings.md](./docs/settings.md)
 
-- `PROJECT_IDS` - A comma-separated list of GCP project IDs
 
 ## MCP Setting
 
@@ -68,8 +64,7 @@ Required environment variables:
             ],
             "env": {
                 "PYTHONPATH": "<your install directory>",
-                "PROJECT_IDS": "<your project id>",
-                "QUERY_EXECUTION_PROJECT_ID": "<your project id>"
+                "PROJECT_IDS": "<your project id>"
             }
         }
     }
