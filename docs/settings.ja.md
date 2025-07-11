@@ -11,7 +11,7 @@ BQ MCPサーバーで利用可能なすべての設定項目について説明�
 
 ### --gcp-service-account-key-path
 
-**説明**: GCPサービスアカウントのJSONキーファイルのパス(省略時はApplication Default Credentialsを使用)
+**説明**: GCPサービスアカウントのJSONキーファイルのパス (省略時はApplication Default Credentialsを使用)
 
 **環境変数**: `GCP_SERVICE_ACCOUNT_KEY_PATH`
 

@@ -11,7 +11,7 @@ When both command-line arguments and environment variables are set, command-line
 
 ### --gcp-service-account-key-path
 
-**Description**: Path to GCP service account JSON key file(uses Application Default Credentials by default)
+**Description**: Path to GCP service account JSON key file (uses Application Default Credentials by default)
 
 **Environment Variable**: `GCP_SERVICE_ACCOUNT_KEY_PATH`
 
