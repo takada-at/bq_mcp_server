@@ -66,7 +66,11 @@ def init_setting() -> Settings:
     """Initialize settings from environment variables"""
     # Load environment variables
     gcp_service_account_key_path = _load_env_variable("GCP_SERVICE_ACCOUNT_KEY_PATH")
-    project_ids = _load_env_variable("PROJECT_IDS", "").split(",")
+    project_ids = [
+        val
+        for val in _load_env_variable("PROJECT_IDS", "").split(",")
+        if val is not None and val.strip() != ""
+    ]
     dataset_filters = _parse_filter_list(_load_env_variable("DATASET_FILTERS", ""))
     cache_ttl_seconds = _load_env_variable("CACHE_TTL_SECONDS", 3600, int)
     cache_file_base_dir = os.path.abspath(

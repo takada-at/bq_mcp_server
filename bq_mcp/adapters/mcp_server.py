@@ -32,6 +32,11 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[ApplicationContext]:
         enable_file_log=os.getenv("ENABLE_FILE_LOGGING", "").lower() in ("1", "true"),
     )
     setting = config.init_setting()
+    log.get_logger().info(
+        f"Initializing application context with settings: {setting.project_ids}"
+    )
+    if setting.project_ids is None or not setting.project_ids:
+        raise ValueError("Project IDs must be configured in settings.")
     logger = log.get_logger()
 
     # Load existing cache without blocking startup
