@@ -45,7 +45,7 @@ def init_logger(
             logger = logging.getLogger("bq_mcp")
             logger.propagate = False
             logger.addHandler(file_handler)
-            logger.info("Logger initialized.")
+            logger.info("Logger initialized. Logging to file: %s", log_file)
     return LogSetting(
         log_to_console=log_to_console, enable_file_logging=enable_file_log
     )
