@@ -33,7 +33,7 @@ def init_logger(
                 level=logging.INFO,
             )
             logger = logging.getLogger("bq_meta_api")
-            logger.info("Logger initialized.")
+            logger.info("Logger initialized. %s", "Logging to console")
         elif enable_file_log:
             DEFAULT_LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             log_dir = Path(Path(__file__).parent / "../../logs").resolve()
@@ -46,6 +46,12 @@ def init_logger(
             logger.propagate = False
             logger.addHandler(file_handler)
             logger.info("Logger initialized. Logging to file: %s", log_file)
+        else:
+            logger = logging.getLogger("bq_mcp")
+            logger.propagate = False
+            logger.disabled = True
+            logger.setLevel(logging.INFO)
+            logger.info("Logger initialized. No logging output configured.")
     return LogSetting(
         log_to_console=log_to_console, enable_file_logging=enable_file_log
     )
