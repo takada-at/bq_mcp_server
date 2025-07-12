@@ -33,7 +33,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[ApplicationContext]:
     )
     setting = config.init_setting()
     log.get_logger().info(
-        f"Initializing application context with settings: {setting.project_ids}"
+        "Initializing application context with settings: %s", setting.project_ids
     )
     if setting.project_ids is None or not setting.project_ids:
         raise ValueError("Project IDs must be configured in settings.")
