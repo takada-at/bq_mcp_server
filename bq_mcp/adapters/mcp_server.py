@@ -151,6 +151,9 @@ def parse_args():
         description="BigQuery MCP Server - Provides access to BigQuery metadata and query execution"
     )
     parser.add_argument(
+        "--transport", choices=("stdio", "sse"), help="MCP Server transport", type=str
+    )
+    parser.add_argument(
         "--gcp-service-account-key-path",
         help="Path to GCP service account JSON key file (uses Application Default Credentials by default)",
     )
@@ -203,7 +206,7 @@ def main():
     apply_args_to_env(args)
 
     # Run the MCP server
-    mcp.run()
+    mcp.run(transport=args.transport)
 
 
 if __name__ == "__main__":
