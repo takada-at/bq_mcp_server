@@ -35,7 +35,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "bq_mcp/**",
+  "bq_mcp_server/**",
   "/tests",
   "README.md",
   "README-ja.md",
@@ -46,17 +46,17 @@ exclude = [
 ]
 
 [project.scripts]
-mcp_server = "bq_mcp.adapters.mcp_server:main"
+mcp_server = "bq_mcp_server.adapters.mcp_server:main"
 
 [project.urls]
-Homepage = "https://github.com/takada-at/bq_mcp"
+Homepage = "https://github.com/takada-at/bq_mcp_server"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=bq_mcp --cov-report=term-missing --cov-report=html"
+addopts = "--cov=bq_mcp_server --cov-report=term-missing --cov-report=html"
 
 [tool.coverage.run]
-source = ["bq_mcp"]
+source = ["bq_mcp_server"]
 omit = [
     "*/tests/*",
     "*/__pycache__/*",

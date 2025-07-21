@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from bq_mcp.core.entities import Settings
-from bq_mcp.repositories import bigquery_client
-from bq_mcp.repositories.config import should_include_dataset
+from bq_mcp_server.core.entities import Settings
+from bq_mcp_server.repositories import bigquery_client
+from bq_mcp_server.repositories.config import should_include_dataset
 
 
 class TestDatasetFilterOptimization:
@@ -57,7 +57,7 @@ class TestDatasetFilterOptimization:
             "bigquery-public-data", "other_dataset", filters
         )
 
-    @patch("bq_mcp.repositories.config.get_settings")
+    @patch("bq_mcp_server.repositories.config.get_settings")
     @pytest.mark.asyncio
     async def test_fetch_datasets_filter_optimization(self, mock_get_settings):
         """Test that fetch_datasets skips filtered datasets efficiently"""
@@ -93,7 +93,7 @@ class TestDatasetFilterOptimization:
         ]
 
         with patch(
-            "bq_mcp.repositories.bigquery_client._paginate_bigquery_api"
+            "bq_mcp_server.repositories.bigquery_client._paginate_bigquery_api"
         ) as mock_paginate:
             mock_paginate.return_value = datasets_list
 
@@ -120,7 +120,7 @@ class TestDatasetFilterOptimization:
                 # Since descriptions are always None in initial list, all included datasets need fetching
                 assert mock_get.call_count == 2
 
-    @patch("bq_mcp.repositories.config.get_settings")
+    @patch("bq_mcp_server.repositories.config.get_settings")
     @pytest.mark.asyncio
     async def test_fetch_datasets_no_filters(self, mock_get_settings):
         """Test that fetch_datasets processes all datasets when no filters are set"""
@@ -148,7 +148,7 @@ class TestDatasetFilterOptimization:
         ]
 
         with patch(
-            "bq_mcp.repositories.bigquery_client._paginate_bigquery_api"
+            "bq_mcp_server.repositories.bigquery_client._paginate_bigquery_api"
         ) as mock_paginate:
             mock_paginate.return_value = datasets_list
 

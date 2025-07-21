@@ -7,8 +7,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi import Path as FastApiPath
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 
-from bq_mcp.core import converter
-from bq_mcp.core.entities import (
+from bq_mcp_server.core import converter
+from bq_mcp_server.core.entities import (
     ApplicationContext,
     CachedData,
     DatasetListResponse,
@@ -18,7 +18,7 @@ from bq_mcp.core.entities import (
     TableListResponse,
     TableMetadata,
 )
-from bq_mcp.repositories import cache_manager, config, log, logic, search_engine
+from bq_mcp_server.repositories import cache_manager, config, log, logic, search_engine
 
 
 @asynccontextmanager
@@ -230,6 +230,6 @@ async def execute_query(request: QueryExecutionRequest):
 # Start uvicorn when this file is executed directly
 if __name__ == "__main__":
     # To specify main:app, do not execute this file directly,
-    # but run from command line like `uvicorn bq_mcp.main:app --reload --host 0.0.0.0 --port 8000`
+    # but run from command line like `uvicorn bq_mcp_server.main:app --reload --host 0.0.0.0 --port 8000`
     print("To start the server, execute the following command:")
-    print("uvicorn bq_mcp.adapters.web:app --reload")
+    print("uvicorn bq_mcp_server.adapters.web:app --reload")

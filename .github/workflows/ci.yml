@@ -31,7 +31,7 @@ jobs:
       run: uv run ruff check
 
     - name: Type check with mypy
-      run: uv run mypy bq_mcp/
+      run: uv run mypy bq_mcp_server/
     
     - name: Run tests
       run: uv run pytest

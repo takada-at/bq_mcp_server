@@ -8,14 +8,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pytest` - Run all tests
 - `pytest tests/test_logic.py` - Run specific test file
 - `pytest -k test_function_name` - Run specific test
-- `pytest --cov=bq_mcp` - Run tests with coverage report
+- `pytest --cov=bq_mcp_server` - Run tests with coverage report
 - `pytest -v` - Run tests with verbose output
 
 ### Code Quality
 - `ruff check` - Run linting checks
 - `ruff format` - Format code
 - `lizard` - Run cyclomatic complexity analysis
-- `mypy bq_mcp/` - Run type checking
+- `mypy bq_mcp_server/` - Run type checking
 
 ### Package Management
 - Uses `uv` for dependency management
@@ -32,13 +32,13 @@ This is a BigQuery metadata API server that provides access to BigQuery dataset,
 
 ### Core Components
 
-**Domain Layer (`bq_mcp/core/`)**:
+**Domain Layer (`bq_mcp_server/core/`)**:
 - `entities.py` - Pydantic models for data structures (DatasetMetadata, TableMetadata, CachedData, QueryExecutionRequest, etc.)
 - `logic.py` - Business logic for retrieving datasets and tables with caching
 - `converter.py` - Converts data structures to markdown format for API responses
 - `query_parser.py` - SQL query parsing and LIMIT clause manipulation with safety checks
 
-**Repository Layer (`bq_mcp/repositories/`)**:
+**Repository Layer (`bq_mcp_server/repositories/`)**:
 - `bigquery_client.py` - Google Cloud BigQuery API client wrapper
 - `cache_manager.py` - Manages local caching of BigQuery metadata with TTL
 - `search_engine.py` - Full-text search functionality across cached metadata
@@ -46,7 +46,7 @@ This is a BigQuery metadata API server that provides access to BigQuery dataset,
 - `config.py` - Application configuration management (environment variables, project IDs)
 - `log.py` - Centralized logging configuration
 
-**Adapter Layer (`bq_mcp/adapters/`)**:
+**Adapter Layer (`bq_mcp_server/adapters/`)**:
 - `mcp_server.py` - MCP server implementation with tools: `get_datasets`, `get_tables`, `search_metadata`, `execute_query`
 - `web.py` - FastAPI REST endpoints including `/query/execute`
 - `bq_agent_gradio.py` - Gradio web interface
@@ -85,7 +85,7 @@ The MCP server (`mcp_server.py`) is the primary interface, providing five main t
 - `DEFAULT_QUERY_LIMIT` - Default LIMIT value added to queries (default: 10)
 - `QUERY_TIMEOUT_SECONDS` - Query execution timeout (default: 300 seconds)
 
-Run the MCP server with: `python -m bq_mcp.adapters.mcp_server`
+Run the MCP server with: `python -m bq_mcp_server.adapters.mcp_server`
 
 ## Important Development Notes
 
@@ -97,7 +97,7 @@ Run the MCP server with: `python -m bq_mcp.adapters.mcp_server`
 
 ### Debugging MCP Issues
 - Check log files in `logs/` directory for debugging information
-- Test with web API (`bq_mcp.adapters.web`) as alternative to stdio MCP for development
+- Test with web API (`bq_mcp_server.adapters.web`) as alternative to stdio MCP for development
 
 ### Environment Setup
 Required environment variable:
@@ -107,6 +107,6 @@ The application uses Google Cloud Application Default Credentials (ADC) by defau
 - `GCP_SERVICE_ACCOUNT_KEY_PATH` - Path to service account JSON key file
 
 ### Running the Application
-- MCP Server: `python -m bq_mcp.adapters.mcp_server`
-- Web API: `python -m bq_mcp.adapters.web` (runs on http://localhost:8080)
-- Gradio UI: `python -m bq_mcp.adapters.bq_agent_gradio`
+- MCP Server: `python -m bq_mcp_server.adapters.mcp_server`
+- Web API: `python -m bq_mcp_server.adapters.web` (runs on http://localhost:8080)
+- Gradio UI: `python -m bq_mcp_server.adapters.bq_agent_gradio`

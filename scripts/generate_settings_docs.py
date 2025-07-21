@@ -118,7 +118,7 @@ class EnvMappingVisitor(ast.NodeVisitor):
 def parse_mcp_server() -> Tuple[List[Dict[str, any]], Dict[str, str]]:
     """Parse mcp_server.py and extract argument information"""
     mcp_server_path = (
-        Path(__file__).parent.parent / "bq_mcp" / "adapters" / "mcp_server.py"
+        Path(__file__).parent.parent / "bq_mcp_server" / "adapters" / "mcp_server.py"
     )
 
     with open(mcp_server_path, "r", encoding="utf-8") as f:
@@ -137,7 +137,9 @@ def parse_mcp_server() -> Tuple[List[Dict[str, any]], Dict[str, str]]:
 
 def get_env_var_info() -> Dict[str, Dict[str, any]]:
     """Get environment variable information from entities.py Settings class"""
-    entities_path = Path(__file__).parent.parent / "bq_mcp" / "core" / "entities.py"
+    entities_path = (
+        Path(__file__).parent.parent / "bq_mcp_server" / "core" / "entities.py"
+    )
 
     # Parse entities.py to find Settings class
     with open(entities_path, "r", encoding="utf-8") as f:
@@ -352,13 +354,17 @@ def generate_documentation(
         lines.append("```bash")
         if "type" in arg:
             if arg["type"] == "int":
-                lines.append(f"python -m bq_mcp.adapters.mcp_server {main_name} 3600")
+                lines.append(
+                    f"python -m bq_mcp_server.adapters.mcp_server {main_name} 3600"
+                )
             else:
                 lines.append(
-                    f'python -m bq_mcp.adapters.mcp_server {main_name} "value"'
+                    f'python -m bq_mcp_server.adapters.mcp_server {main_name} "value"'
                 )
         else:
-            lines.append(f'python -m bq_mcp.adapters.mcp_server {main_name} "value"')
+            lines.append(
+                f'python -m bq_mcp_server.adapters.mcp_server {main_name} "value"'
+            )
         lines.append("```")
         lines.append("")
 

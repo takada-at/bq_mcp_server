@@ -17,7 +17,7 @@ BQ MCPサーバーで利用可能なすべての設定項目について説明�
 
 **使用方法**:
 ```bash
-python -m bq_mcp.adapters.mcp_server --gcp-service-account-key-path "value"
+python -m bq_mcp_server.adapters.mcp_server --gcp-service-account-key-path "value"
 ```
 
 ### --project-ids
@@ -29,7 +29,7 @@ python -m bq_mcp.adapters.mcp_server --gcp-service-account-key-path "value"
 
 **使用方法**:
 ```bash
-python -m bq_mcp.adapters.mcp_server --project-ids "value"
+python -m bq_mcp_server.adapters.mcp_server --project-ids "value"
 ```
 
 ### --dataset-filters
@@ -40,7 +40,7 @@ python -m bq_mcp.adapters.mcp_server --project-ids "value"
 
 **使用方法**:
 ```bash
-python -m bq_mcp.adapters.mcp_server --dataset-filters "value"
+python -m bq_mcp_server.adapters.mcp_server --dataset-filters "value"
 ```
 
 ### --cache-ttl-seconds
@@ -54,7 +54,7 @@ python -m bq_mcp.adapters.mcp_server --dataset-filters "value"
 
 **使用方法**:
 ```bash
-python -m bq_mcp.adapters.mcp_server --cache-ttl-seconds 3600
+python -m bq_mcp_server.adapters.mcp_server --cache-ttl-seconds 3600
 ```
 
 ### --cache-file-base-dir
@@ -66,7 +66,7 @@ python -m bq_mcp.adapters.mcp_server --cache-ttl-seconds 3600
 
 **使用方法**:
 ```bash
-python -m bq_mcp.adapters.mcp_server --cache-file-base-dir "value"
+python -m bq_mcp_server.adapters.mcp_server --cache-file-base-dir "value"
 ```
 
 ### --query-execution-project-id
@@ -77,7 +77,7 @@ python -m bq_mcp.adapters.mcp_server --cache-file-base-dir "value"
 
 **使用方法**:
 ```bash
-python -m bq_mcp.adapters.mcp_server --query-execution-project-id "value"
+python -m bq_mcp_server.adapters.mcp_server --query-execution-project-id "value"
 ```
 
 ## 環境変数リファレンス

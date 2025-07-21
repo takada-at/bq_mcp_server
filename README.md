@@ -54,7 +54,7 @@ For a list of configuration values, see:
 ```json
 {
     "mcpServers": {
-        "bq_mcp": {
+        "bq_mcp_server": {
             "command": "uv",
             "args": [
                 "run",
@@ -94,7 +94,7 @@ pytest -k test_function_name
 ### Checking Test Coverage
 
 ```bash
-pytest --cov=bq_mcp
+pytest --cov=bq_mcp_server
 ```
 
 ## Local Development
@@ -102,13 +102,13 @@ pytest --cov=bq_mcp
 ### Starting the MCP Server
 
 ```bash
-python -m bq_meta_api.adapters.mcp_server
+uv run mcp_server
 ```
 
 ### Starting the FastAPI REST API Server
 
 ```bash
-python -m bq_meta_api.adapters.web
+uvicorn bq_mcp_server.adapters.web:app --reload
 ```
 
 ### Development Commands

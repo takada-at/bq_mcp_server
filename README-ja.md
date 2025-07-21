@@ -54,7 +54,7 @@ uv sync
 ```json
 {
     "mcpServers": {
-        "bq_mcp": {
+        "bq_mcp_server": {
             "command": "uv",
             "args": [
                 "run",
@@ -94,7 +94,7 @@ pytest -k test_function_name
 ### テストカバレッジを確認
 
 ```bash
-pytest --cov=bq_mcp
+pytest --cov=bq_mcp_server
 ```
 
 ## ローカル開発
@@ -102,13 +102,13 @@ pytest --cov=bq_mcp
 ### MCPサーバーの起動
 
 ```bash
-python -m bq_meta_api.adapters.mcp_server
+uv run mcp_server
 ```
 
 ### FastAPI REST APIサーバーの起動
 
 ```bash
-python -m bq_meta_api.adapters.web
+uvicorn bq_mcp_server.adapters.web:app --reload
 ```
 
 ### 開発用コマンド

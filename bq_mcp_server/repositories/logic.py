@@ -6,10 +6,10 @@ from typing import List, Optional
 
 from fastapi import HTTPException
 
-from bq_mcp.core import logic_base
-from bq_mcp.core.entities import CachedData, DatasetListResponse, TableMetadata
-from bq_mcp.repositories import cache_manager, config, log
-from bq_mcp.repositories.query_executor import QueryExecutor
+from bq_mcp_server.core import logic_base
+from bq_mcp_server.core.entities import CachedData, DatasetListResponse, TableMetadata
+from bq_mcp_server.repositories import cache_manager, config, log
+from bq_mcp_server.repositories.query_executor import QueryExecutor
 
 
 # --- Private implementation functions ---

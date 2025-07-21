@@ -7,15 +7,15 @@ from gcloud.aio.auth.token import Token
 from gcloud.aio.bigquery import Dataset, Table
 from google.auth.exceptions import DefaultCredentialsError, RefreshError
 
-from bq_mcp.core.async_funcs import gather_in_batches
-from bq_mcp.core.entities import (
+from bq_mcp_server.core.async_funcs import gather_in_batches
+from bq_mcp_server.core.entities import (
     ColumnSchema,
     DatasetMetadata,
     TableMetadata,
     TableSchema,
 )
-from bq_mcp.repositories import config, log
-from bq_mcp.repositories.config import should_include_dataset
+from bq_mcp_server.repositories import config, log
+from bq_mcp_server.repositories.config import should_include_dataset
 
 
 def get_bigquery_client() -> Optional[Dataset]:

@@ -17,9 +17,9 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from bq_mcp.core import converter
-from bq_mcp.core.entities import ApplicationContext, CachedData
-from bq_mcp.repositories import cache_manager, config, log, logic, search_engine
+from bq_mcp_server.core import converter
+from bq_mcp_server.core.entities import ApplicationContext, CachedData
+from bq_mcp_server.repositories import cache_manager, config, log, logic, search_engine
 
 
 @asynccontextmanager
@@ -175,6 +175,9 @@ def parse_args():
         "--query-execution-project-id",
         help="Project ID to use for query execution (defaults to first project in project-ids)",
     )
+    parser.add_argument(
+        "--transport", choices=("stdio", "sse"), help="MCP Server transport", type=str
+    )
     return parser.parse_args()
 
 
@@ -203,7 +206,7 @@ def main():
     apply_args_to_env(args)
 
     # Run the MCP server
-    mcp.run()
+    mcp.run(transport=args.transport)
 
 
 if __name__ == "__main__":
