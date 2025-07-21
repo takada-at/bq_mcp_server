@@ -177,7 +177,7 @@ def parse_args():
     )
     parser.add_argument(
         "--transport", choices=("stdio", "sse"), help="MCP Server transport", type=str
-    )    
+    )
     return parser.parse_args()
 
 
