@@ -1,5 +1,5 @@
 [project]
-name = "bq_mcp"
+name = "bq_mcp_server"
 authors = [
     {name = "takada-at", email = "takada-at@klab.com"}
 ]
