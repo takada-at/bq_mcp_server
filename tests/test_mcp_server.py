@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from bq_mcp.adapters import mcp_server
+from bq_mcp_server.adapters import mcp_server
 
 
 @pytest.mark.asyncio

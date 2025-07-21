@@ -17,9 +17,9 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from bq_mcp.core import converter
-from bq_mcp.core.entities import ApplicationContext, CachedData
-from bq_mcp.repositories import cache_manager, config, log, logic, search_engine
+from bq_mcp_server.core import converter
+from bq_mcp_server.core.entities import ApplicationContext, CachedData
+from bq_mcp_server.repositories import cache_manager, config, log, logic, search_engine
 
 
 @asynccontextmanager

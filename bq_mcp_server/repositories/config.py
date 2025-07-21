@@ -6,8 +6,8 @@ from typing import List
 
 from dotenv import load_dotenv
 
-from bq_mcp.core.entities import Settings
-from bq_mcp.repositories import log
+from bq_mcp_server.core.entities import Settings
+from bq_mcp_server.repositories import log
 
 # Load .env file
 root = Path(__file__).parent.parent.parent.resolve()

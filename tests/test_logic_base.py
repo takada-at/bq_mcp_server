@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from bq_mcp.core import logic_base
-from bq_mcp.core.entities import (
+from bq_mcp_server.core import logic_base
+from bq_mcp_server.core.entities import (
     CachedData,
     ColumnSchema,
     DatasetListResponse,

@@ -12,7 +12,7 @@ from typing import Any, List, Tuple
 
 from pydantic.fields import FieldInfo
 
-from bq_mcp.core.entities import Settings
+from bq_mcp_server.core.entities import Settings
 
 
 def _extract_default_value(field_info: FieldInfo) -> Any:

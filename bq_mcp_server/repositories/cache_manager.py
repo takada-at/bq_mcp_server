@@ -5,9 +5,9 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from bq_mcp.core.entities import CachedData, DatasetMetadata, TableMetadata
-from bq_mcp.repositories import bigquery_client, config, log
-from bq_mcp.repositories.config import should_include_dataset
+from bq_mcp_server.core.entities import CachedData, DatasetMetadata, TableMetadata
+from bq_mcp_server.repositories import bigquery_client, config, log
+from bq_mcp_server.repositories.config import should_include_dataset
 
 # In-memory cache (singleton-like retention)
 _cache: Optional[CachedData] = None

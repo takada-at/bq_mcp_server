@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from bq_mcp.core.entities import LogSetting
+from bq_mcp_server.core.entities import LogSetting
 
 logger: logging.Logger | None = None
 
@@ -32,22 +32,22 @@ def init_logger(
             logging.basicConfig(
                 level=logging.INFO,
             )
-            logger = logging.getLogger("bq_meta_api")
+            logger = logging.getLogger("bq_mcp_server")
             logger.info("Logger initialized. %s", "Logging to console")
         elif enable_file_log:
             DEFAULT_LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             log_dir = Path(Path(__file__).parent / "../../logs").resolve()
             log_dir.mkdir(parents=True, exist_ok=True)
-            log_file = log_dir / "bq_mcp.log"
+            log_file = log_dir / "bq_mcp_server.log"
             formatter = logging.Formatter(DEFAULT_LOG_FORMAT)
             file_handler = logging.FileHandler(log_file)
             file_handler.setFormatter(formatter)
-            logger = logging.getLogger("bq_mcp")
+            logger = logging.getLogger("bq_mcp_server")
             logger.propagate = False
             logger.addHandler(file_handler)
             logger.info("Logger initialized. Logging to file: %s", log_file)
         else:
-            logger = logging.getLogger("bq_mcp")
+            logger = logging.getLogger("bq_mcp_server")
             logger.propagate = False
             logger.disabled = True
             logger.setLevel(logging.INFO)

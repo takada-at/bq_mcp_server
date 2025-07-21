@@ -3,14 +3,14 @@ from unittest.mock import patch
 
 import pytest
 
-from bq_mcp.core.entities import (
+from bq_mcp_server.core.entities import (
     CachedData,
     ColumnSchema,
     DatasetMetadata,
     TableMetadata,
     TableSchema,
 )
-from bq_mcp.repositories.search_engine import _search_columns, search_metadata
+from bq_mcp_server.repositories.search_engine import _search_columns, search_metadata
 
 
 @pytest.fixture
@@ -127,7 +127,7 @@ def test_cached_data(test_timestamp):
 
 
 @pytest.mark.asyncio
-@patch("bq_mcp.repositories.cache_manager.get_cached_data")
+@patch("bq_mcp_server.repositories.cache_manager.get_cached_data")
 async def test_search_metadata_no_cache(mock_get_cached_data):
     """Returns empty list when there is no cache data"""
     # Mock state with no cache data
@@ -142,7 +142,7 @@ async def test_search_metadata_no_cache(mock_get_cached_data):
 
 
 @pytest.mark.asyncio
-@patch("bq_mcp.repositories.cache_manager.get_cached_data")
+@patch("bq_mcp_server.repositories.cache_manager.get_cached_data")
 async def test_search_metadata_dataset_name(mock_get_cached_data, test_cached_data):
     """Test case for keyword matching in dataset name"""
     # Mock cache data
@@ -159,7 +159,7 @@ async def test_search_metadata_dataset_name(mock_get_cached_data, test_cached_da
 
 
 @pytest.mark.asyncio
-@patch("bq_mcp.repositories.cache_manager.get_cached_data")
+@patch("bq_mcp_server.repositories.cache_manager.get_cached_data")
 async def test_search_metadata_dataset_description(
     mock_get_cached_data, test_cached_data
 ):
@@ -178,7 +178,7 @@ async def test_search_metadata_dataset_description(
 
 
 @pytest.mark.asyncio
-@patch("bq_mcp.repositories.cache_manager.get_cached_data")
+@patch("bq_mcp_server.repositories.cache_manager.get_cached_data")
 async def test_search_metadata_table_name(mock_get_cached_data, test_cached_data):
     """Test case for keyword matching in table name"""
     # Mock cache data
@@ -195,7 +195,7 @@ async def test_search_metadata_table_name(mock_get_cached_data, test_cached_data
 
 
 @pytest.mark.asyncio
-@patch("bq_mcp.repositories.cache_manager.get_cached_data")
+@patch("bq_mcp_server.repositories.cache_manager.get_cached_data")
 async def test_search_metadata_table_description(
     mock_get_cached_data, test_cached_data
 ):
@@ -214,7 +214,7 @@ async def test_search_metadata_table_description(
 
 
 @pytest.mark.asyncio
-@patch("bq_mcp.repositories.cache_manager.get_cached_data")
+@patch("bq_mcp_server.repositories.cache_manager.get_cached_data")
 async def test_search_metadata_column_name(mock_get_cached_data, test_cached_data):
     """Test case for keyword matching in column name"""
     # Mock cache data
@@ -231,7 +231,7 @@ async def test_search_metadata_column_name(mock_get_cached_data, test_cached_dat
 
 
 @pytest.mark.asyncio
-@patch("bq_mcp.repositories.cache_manager.get_cached_data")
+@patch("bq_mcp_server.repositories.cache_manager.get_cached_data")
 async def test_search_metadata_column_description(
     mock_get_cached_data, test_cached_data
 ):
@@ -251,7 +251,7 @@ async def test_search_metadata_column_description(
 
 
 @pytest.mark.asyncio
-@patch("bq_mcp.repositories.cache_manager.get_cached_data")
+@patch("bq_mcp_server.repositories.cache_manager.get_cached_data")
 async def test_search_metadata_nested_column(mock_get_cached_data, test_cached_data):
     """Test case for keyword matching in nested columns"""
     # Mock cache data
@@ -268,7 +268,7 @@ async def test_search_metadata_nested_column(mock_get_cached_data, test_cached_d
 
 
 @pytest.mark.asyncio
-@patch("bq_mcp.repositories.cache_manager.get_cached_data")
+@patch("bq_mcp_server.repositories.cache_manager.get_cached_data")
 async def test_search_metadata_case_insensitive(mock_get_cached_data, test_cached_data):
     """Test to confirm that search is case insensitive"""
     # Mock cache data

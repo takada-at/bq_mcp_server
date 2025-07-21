@@ -1,7 +1,7 @@
 """Tests for core/converter.py - markdown conversion functionality"""
 
-from bq_mcp.core import converter
-from bq_mcp.core.entities import (
+from bq_mcp_server.core import converter
+from bq_mcp_server.core.entities import (
     ColumnSchema,
     DatasetMetadata,
     QueryDryRunResult,

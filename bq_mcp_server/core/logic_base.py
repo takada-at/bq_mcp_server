@@ -2,7 +2,7 @@
 
 from typing import Awaitable, Callable, List, Optional, Tuple
 
-from bq_mcp.core.entities import (
+from bq_mcp_server.core.entities import (
     CachedData,
     DatasetListResponse,
     DatasetMetadata,
