@@ -176,7 +176,11 @@ def parse_args():
         help="Project ID to use for query execution (defaults to first project in project-ids)",
     )
     parser.add_argument(
-        "--transport", choices=("stdio", "sse"), help="MCP Server transport", type=str, default="stdio"
+        "--transport",
+        choices=("stdio", "sse"),
+        help="MCP Server transport",
+        type=str,
+        default="stdio",
     )
     return parser.parse_args()
 
