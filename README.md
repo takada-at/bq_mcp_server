@@ -23,12 +23,24 @@ Available tools:
 5. `check_query_scan_amount` - Retrieves the scan amount for BigQuery SQL queries
 
 ## Installation and Environment Setup
-
 ### Prerequisites
 
 - Python 3.11 or later
 - Google Cloud Platform account
 - GCP project with BigQuery API enabled
+
+### Install
+uv
+
+```bash
+uv add bq_mcp_server
+```
+
+pip
+
+```bash
+pip install bq_mcp_server
+```
 
 ### Installing Dependencies
 
@@ -60,7 +72,7 @@ For a list of configuration values, see:
                 "run",
                 "--directory",
                 "<your install directory>",
-                "mcp_server"
+                "bq_mcp_server"
             ],
             "env": {
                 "PYTHONPATH": "<your install directory>",
@@ -102,7 +114,7 @@ pytest --cov=bq_mcp_server
 ### Starting the MCP Server
 
 ```bash
-uv run mcp_server
+uv run bq_mcp_server
 ```
 
 ### Starting the FastAPI REST API Server

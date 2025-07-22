@@ -30,6 +30,19 @@ Google Cloud BigQueryのデータセット、テーブル、スキーマ情報�
 - Google Cloud Platformアカウント
 - BigQuery APIが有効化されたGCPプロジェクト
 
+### インストール
+uv
+
+```bash
+uv add bq_mcp_server
+```
+
+pip
+
+```bash
+pip install bq_mcp_server
+```
+
 ### 依存関係のインストール
 
 本プロジェクトではパッケージ管理に`uv`を使用しています：
@@ -60,7 +73,7 @@ uv sync
                 "run",
                 "--directory",
                 "<your install directory>",
-                "mcp_server"
+                "bq_mcp_server"
             ],
             "env": {
                 "PYTHONPATH": "<your install directory>",
@@ -102,7 +115,7 @@ pytest --cov=bq_mcp_server
 ### MCPサーバーの起動
 
 ```bash
-uv run mcp_server
+uv run bq_mcp_server
 ```
 
 ### FastAPI REST APIサーバーの起動
