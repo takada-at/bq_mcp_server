@@ -10,7 +10,7 @@ from bq_mcp_server.core.entities import Settings
 from bq_mcp_server.repositories import log
 
 # Load .env file
-root = Path(__file__).parent.parent.parent.resolve()
+root = Path(__file__).parent.parent.resolve()
 envpath = (root / ".env").resolve()
 
 load_dotenv(str(envpath))
