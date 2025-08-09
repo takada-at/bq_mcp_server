@@ -3,7 +3,7 @@ name = "bq_mcp_server"
 authors = [
     {name = "takada-at", email = "takada-at@klab.com"}
 ]
-version = "0.1.3"
+version = "0.1.4"
 license = {file = "LICENSE"}
 description = "Python-based MCP (Model Context Protocol) server that retrieves dataset, table, and schema information from Google Cloud BigQuery"
 readme = "README.md"
