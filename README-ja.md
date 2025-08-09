@@ -78,7 +78,8 @@ JSON
         "bq_mcp_server": {
             "command": "uvx",
             "args": [
-                "--from git+https://github.com/takada-at/bq_mcp_server",
+                "--from",
+                "git+https://github.com/takada-at/bq_mcp_server",
                 "bq_mcp_server",
                 "--project-ids",
                 "<your project ids>"
