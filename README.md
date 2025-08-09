@@ -63,21 +63,25 @@ For a list of configuration values, see:
 
 ## MCP Setting
 
+Claude Code
+
+```shell
+claude mcp add bq_mcp_server -- uvx --from git+https://github.com/takada-at/bq_mcp_server bq_mcp_server --project-ids <your project ids>
+```
+
+JSON
+
 ```json
 {
     "mcpServers": {
         "bq_mcp_server": {
-            "command": "uv",
+            "command": "uvx",
             "args": [
-                "run",
-                "--directory",
-                "<your install directory>",
-                "bq_mcp_server"
-            ],
-            "env": {
-                "PYTHONPATH": "<your install directory>",
-                "PROJECT_IDS": "<your project id>"
-            }
+                "--from git+https://github.com/takada-at/bq_mcp_server",
+                "bq_mcp_server",
+                "--project-ids",
+                "<your project ids>"
+            ]
         }
     }
 }

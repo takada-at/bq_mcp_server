@@ -79,12 +79,13 @@ async def _background_cache_update():
 
 mcp = FastMCP(
     "BigQuery MCP",
-    description="Provides access to BigQuery dataset, table, and schema information, and allows safe query execution.",
-    instructions="""Use search_metadata to search for metadata.
-Use get_datasets to retrieve a list of datasets and get_tables to retrieve a list of tables.
-Use execute_query to run BigQuery SQL with automatic safety checks and LIMIT clause management.""",
+    instructions="""
+- Use `search_metadata` to search for metadata.
+- Use `get_datasets` to retrieve a list of datasets.
+- Use `get_tables` to retrieve a list of tables.
+- Use `execute_query` to run BigQuery SQL with automatic safety checks and LIMIT clause management.""",
     lifespan=app_lifespan,
-    version="0.1.0",
+    version="0.1.4",
 )
 
 

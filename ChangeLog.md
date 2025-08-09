@@ -1,3 +1,7 @@
+## 0.1.4 - 2025-08-09
+### Fix
+- Supports mcp library version 1.12.3 and above. Removes the description parameter.
+
 ## 0.1.3 - 2025-08-01
 ### Changed
 - Change the default cache storage location
