@@ -85,7 +85,6 @@ mcp = FastMCP(
 - Use `get_tables` to retrieve a list of tables.
 - Use `execute_query` to run BigQuery SQL with automatic safety checks and LIMIT clause management.""",
     lifespan=app_lifespan,
-    version="0.1.4",
 )
 
 
