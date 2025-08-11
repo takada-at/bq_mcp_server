@@ -5,7 +5,7 @@
 #     "google-cloud-bigquery>=3.31.0",
 #     "pydantic>=2.11.3",
 #     "python-dotenv>=1.1.0",
-#     "mcp[cli]>=1.6.0",
+#     "mcp[cli]==1.12.3",
 # ]
 # ///
 import argparse

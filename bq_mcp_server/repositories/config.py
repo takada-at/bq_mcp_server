@@ -84,7 +84,7 @@ def init_setting() -> Settings:
     max_scan_bytes = _load_env_variable(
         "MAX_SCAN_BYTES", 1024 * 1024 * 1024, int
     )  # 1GB
-    default_query_limit = _load_env_variable("DEFAULT_QUERY_LIMIT", 10, int)
+    default_query_limit = _load_env_variable("DEFAULT_QUERY_LIMIT", 100, int)
     query_timeout_seconds = _load_env_variable(
         "QUERY_TIMEOUT_SECONDS", 300, int
     )  # 5 minutes

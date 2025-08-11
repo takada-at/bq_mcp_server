@@ -80,6 +80,19 @@ python -m bq_mcp_server.adapters.mcp_server --cache-file-base-dir "value"
 python -m bq_mcp_server.adapters.mcp_server --query-execution-project-id "value"
 ```
 
+### --transport
+
+**Description**: MCP Server transport
+
+**Type**: `str`
+
+**Default**: `stdio`
+
+**Usage**:
+```bash
+python -m bq_mcp_server.adapters.mcp_server --transport "value"
+```
+
 ## Environment Variables Reference
 
 The following environment variables are used by the BQ MCP server:

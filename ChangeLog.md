@@ -1,3 +1,7 @@
+## 0.2.1 - 2025-08-11
+### Changed
+- Change the default DEFAULT_QUERY_LIMIT value(10 -> 100).
+
 ## 0.2.0 - 2025-08-11
 ### Added
 - **New MCP tool: `save_query_result`** - Execute BigQuery SQL queries and save results to local files
