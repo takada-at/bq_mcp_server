@@ -8,6 +8,7 @@ from bq_mcp_server.core.entities import (
     DatasetMetadata,
     QueryDryRunResult,
     QueryExecutionResult,
+    QuerySaveResult,
     TableMetadata,
 )
 
@@ -19,6 +20,9 @@ GetCachedDatasetFunc = Callable[
 GetProjectIdsFunc = Callable[[], List[str]]
 CheckScanAmountFunc = Callable[[str, Optional[str]], Awaitable[QueryDryRunResult]]
 ExecuteQueryFunc = Callable[[str, Optional[str]], Awaitable[QueryExecutionResult]]
+ExportToCsvFunc = Callable[[List[dict], str, bool], Awaitable[int]]
+ExportToJsonlFunc = Callable[[List[dict], str], Awaitable[int]]
+ValidateOutputPathFunc = Callable[[str], str]
 LoggerFunc = Callable[[str], None]
 
 
@@ -131,3 +135,114 @@ def create_execute_query(
         return result
 
     return execute_query
+
+
+def create_save_query_result(
+    execute_query: ExecuteQueryFunc,
+    export_to_csv: ExportToCsvFunc,
+    export_to_jsonl: ExportToJsonlFunc,
+    validate_output_path: ValidateOutputPathFunc,
+    logger: LoggerFunc,
+) -> Callable[[str, str, str, Optional[str], bool], Awaitable[QuerySaveResult]]:
+    """Create save_query_result function with injected dependencies"""
+
+    async def save_query_result(
+        sql: str,
+        output_path: str,
+        format: str,
+        project_id: Optional[str] = None,
+        include_header: bool = True,
+    ) -> QuerySaveResult:
+        """Execute query and save results to file"""
+        import time
+
+        start_time = time.time()
+
+        try:
+            # Validate output path first
+            validated_path = validate_output_path(output_path)
+            logger(f"Validated output path: {validated_path}")
+
+            # Validate format
+            if format not in ["csv", "jsonl"]:
+                return QuerySaveResult(
+                    success=False,
+                    output_path=output_path,
+                    format=format,
+                    total_rows=0,
+                    file_size_bytes=0,
+                    execution_time_ms=int((time.time() - start_time) * 1000),
+                    query_bytes_processed=None,
+                    error_message=f"Unsupported format: {format}. Supported formats: csv, jsonl",
+                )
+
+            # Execute query
+            logger(f"Executing query for save operation: {sql[:100]}...")
+            query_result = await execute_query(sql, project_id)
+
+            # Check if query execution failed
+            if not query_result.success:
+                return QuerySaveResult(
+                    success=False,
+                    output_path=validated_path,
+                    format=format,
+                    total_rows=0,
+                    file_size_bytes=0,
+                    execution_time_ms=int((time.time() - start_time) * 1000),
+                    query_bytes_processed=query_result.total_bytes_processed,
+                    error_message=query_result.error_message,
+                )
+
+            # Export to file
+            try:
+                if format == "csv":
+                    file_size = await export_to_csv(
+                        query_result.rows or [], validated_path, include_header
+                    )
+                else:  # jsonl
+                    file_size = await export_to_jsonl(
+                        query_result.rows or [], validated_path
+                    )
+
+                logger(
+                    f"Successfully saved {query_result.total_rows} rows to {validated_path}"
+                )
+
+                return QuerySaveResult(
+                    success=True,
+                    output_path=validated_path,
+                    format=format,
+                    total_rows=query_result.total_rows or 0,
+                    file_size_bytes=file_size,
+                    execution_time_ms=int((time.time() - start_time) * 1000),
+                    query_bytes_processed=query_result.total_bytes_processed,
+                    error_message=None,
+                )
+
+            except Exception as e:
+                logger(f"File export failed: {str(e)}")
+                return QuerySaveResult(
+                    success=False,
+                    output_path=validated_path,
+                    format=format,
+                    total_rows=query_result.total_rows or 0,
+                    file_size_bytes=0,
+                    execution_time_ms=int((time.time() - start_time) * 1000),
+                    query_bytes_processed=query_result.total_bytes_processed,
+                    error_message=f"Failed to export to file: {str(e)}",
+                )
+
+        except Exception as e:
+            logger(f"Save query result failed: {str(e)}")
+            return QuerySaveResult(
+                success=False,
+                output_path=output_path,
+                format=format,
+                total_rows=0,
+                file_size_bytes=0,
+                execution_time_ms=int((time.time() - start_time) * 1000),
+                query_bytes_processed=None,
+                error_message=str(e),
+            )
+
+    return save_query_result

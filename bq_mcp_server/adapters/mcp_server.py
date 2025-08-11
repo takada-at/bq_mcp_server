@@ -83,7 +83,8 @@ mcp = FastMCP(
 - Use `search_metadata` to search for metadata.
 - Use `get_datasets` to retrieve a list of datasets.
 - Use `get_tables` to retrieve a list of tables.
-- Use `execute_query` to run BigQuery SQL with automatic safety checks and LIMIT clause management.""",
+- Use `execute_query` to run BigQuery SQL with automatic safety checks and LIMIT clause management.
+- Use `save_query_result` to execute BigQuery SQL and save results to local file (CSV or JSONL format).""",
     lifespan=app_lifespan,
 )
 
@@ -143,6 +144,30 @@ async def execute_query(sql: str, project_id: Optional[str] = None):
     # Force execution flag is always set to False. No workarounds allowed in MCP.
     result = await logic.execute_query(sql, project_id)
     return converter.convert_query_result_to_markdown(result, project_id)
+
+
+@mcp.tool("save_query_result")
+async def save_query_result(
+    sql: str,
+    output_path: str,
+    format: str = "csv",
+    project_id: Optional[str] = None,
+    include_header: bool = True,
+):
+    """
+    Execute BigQuery SQL and save results to a local file.
+
+    Args:
+        sql: The SQL query to execute
+        output_path: Path where to save the results
+        format: Output format - 'csv' or 'jsonl' (defaults to 'csv')
+        project_id: Optional project ID to use for the query (defaults to first configured project)
+        include_header: Include header row in CSV output (ignored for JSONL, defaults to True)
+    """
+    result = await logic.save_query_result(
+        sql, output_path, format, project_id, include_header
+    )
+    return converter.convert_save_result_to_markdown(result)
 
 
 def parse_args():

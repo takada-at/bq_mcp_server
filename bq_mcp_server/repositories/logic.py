@@ -8,6 +8,11 @@ from fastapi import HTTPException
 
 from bq_mcp_server.core import logic_base
 from bq_mcp_server.core.entities import CachedData, DatasetListResponse, TableMetadata
+from bq_mcp_server.core.file_exporter import (
+    export_to_csv,
+    export_to_jsonl,
+    validate_output_path,
+)
 from bq_mcp_server.repositories import cache_manager, config, log
 from bq_mcp_server.repositories.query_executor import QueryExecutor
 
@@ -102,6 +107,14 @@ check_query_scan_amount = logic_base.create_check_query_scan_amount(
 
 execute_query = logic_base.create_execute_query(
     execute_query_impl=_execute_query_impl, logger=_logger_info
+)
+
+save_query_result = logic_base.create_save_query_result(
+    execute_query=execute_query,
+    export_to_csv=export_to_csv,
+    export_to_jsonl=export_to_jsonl,
+    validate_output_path=validate_output_path,
+    logger=_logger_info,
 )
 
 

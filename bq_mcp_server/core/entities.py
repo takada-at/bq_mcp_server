@@ -137,6 +137,37 @@ class QueryExecutionResult(BaseModel):
     job_id: Optional[str] = Field(None, description="BigQuery job ID")
 
 
+class QuerySaveRequest(BaseModel):
+    """Query result save request model"""
+
+    sql: str = Field(..., description="SQL query to execute")
+    output_path: str = Field(..., description="Output file path for saving results")
+    format: str = Field(..., description="Output format ('csv' or 'jsonl')")
+    project_id: Optional[str] = Field(
+        None, description="Target project ID for execution"
+    )
+    include_header: bool = Field(
+        True, description="Include header row in CSV output (ignored for JSONL)"
+    )
+
+
+class QuerySaveResult(BaseModel):
+    """Query result save result model"""
+
+    success: bool = Field(..., description="Whether the save operation was successful")
+    output_path: str = Field(..., description="Path where the file was saved")
+    format: str = Field(..., description="Format of the saved file")
+    total_rows: int = Field(..., description="Number of rows saved")
+    file_size_bytes: int = Field(..., description="Size of the saved file in bytes")
+    execution_time_ms: int = Field(
+        ..., description="Total execution time in milliseconds"
+    )
+    query_bytes_processed: Optional[int] = Field(
+        None, description="Bytes processed by the query"
+    )
+    error_message: Optional[str] = Field(None, description="Error message if failed")
+
+
 # --- Cache Data Structures ---
 class CachedData(BaseModel):
     """Model for entire data stored in cache"""
