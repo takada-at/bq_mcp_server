@@ -1,4 +1,4 @@
-## 0.1.5 - 2025-08-11
+## 0.2.0 - 2025-08-11
 ### Added
 - **New MCP tool: `save_query_result`** - Execute BigQuery SQL queries and save results to local files
   - Support for CSV and JSONL output formats
