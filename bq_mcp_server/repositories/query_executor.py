@@ -127,7 +127,11 @@ class QueryExecutor:
             )
 
     async def execute_query(
-        self, sql: str, project_id: Optional[str] = None, force_execute: bool = False
+        self,
+        sql: str,
+        project_id: Optional[str] = None,
+        force_execute: bool = False,
+        skip_limit_modification: bool = False,
     ) -> QueryExecutionResult:
         """
         Execute query safely
@@ -136,6 +140,7 @@ class QueryExecutor:
             sql: SQL query to execute
             project_id: Target project ID for execution
             force_execute: Whether to skip dry run check and force execution
+            skip_limit_modification: Whether to skip automatic LIMIT clause addition
 
         Returns:
             Query execution result
@@ -144,8 +149,16 @@ class QueryExecutor:
         self.logger.info(f"Starting query execution: {sql[:100]}...")
 
         try:
-            # Query preparation (safety check + LIMIT clause modification)
-            modified_sql = self._validate_and_prepare_query(sql)
+            # Query preparation
+            if skip_limit_modification:
+                # Safety check only, no LIMIT modification
+                is_safe, error_msg = QueryParser.is_safe_query(sql)
+                if not is_safe:
+                    raise HTTPException(status_code=400, detail=error_msg)
+                modified_sql = sql  # Use original SQL without modification
+            else:
+                # Safety check + LIMIT clause modification (default behavior)
+                modified_sql = self._validate_and_prepare_query(sql)
 
             # Dry run check (only when force_execute is False)
             if not force_execute:
@@ -229,6 +242,9 @@ class QueryExecutor:
                 error_message=None,
             )
 
+        except HTTPException:
+            # Re-raise HTTPException to be handled at a higher level
+            raise
         except Exception as e:
             execution_time_ms = int((time.time() - start_time) * 1000)
             error_msg = str(e)

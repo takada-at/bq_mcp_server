@@ -75,6 +75,15 @@ async def _execute_query_impl(sql: str, project_id: Optional[str] = None):
     return await query_executor.execute_query(sql, project_id, force_execute=False)
 
 
+async def _execute_query_no_limit_impl(sql: str, project_id: Optional[str] = None):
+    """Execute query using QueryExecutor without LIMIT clause"""
+    settings = config.get_settings()
+    query_executor = QueryExecutor(settings)
+    return await query_executor.execute_query(
+        sql, project_id, skip_limit_modification=True
+    )
+
+
 # --- Logger functions ---
 def _logger_info(message: str):
     """Log info message"""
@@ -109,8 +118,12 @@ execute_query = logic_base.create_execute_query(
     execute_query_impl=_execute_query_impl, logger=_logger_info
 )
 
+execute_query_no_limit = logic_base.create_execute_query(
+    execute_query_impl=_execute_query_no_limit_impl, logger=_logger_info
+)
+
 save_query_result = logic_base.create_save_query_result(
-    execute_query=execute_query,
+    execute_query=execute_query_no_limit,
     export_to_csv=export_to_csv,
     export_to_jsonl=export_to_jsonl,
     validate_output_path=validate_output_path,
