@@ -26,6 +26,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Scripts
 - `python scripts/generate_env_example.py` - Generate .env.example from config.py
 
+## Development Guidelines
+
+### Code Style Guidelines
+- **Models and Data Classes**: Use Pydantic models or dataclasses for data structures (entities, DTOs, configurations)
+- **Logic Implementation**: Write business logic as plain functions, not classes
+- **No Namespace Classes**: Avoid classes that only serve as namespaces - use modules and functions instead
+- **Dependency Injection**: Use function parameters for dependencies rather than class constructors
+- **Import Statements**: Always place import statements at the top of the file (global scope), not inside functions or classes
+
 ## High-Level Architecture
 
 This is a BigQuery metadata API server that provides access to BigQuery dataset, table, and schema information through both REST API and MCP (Model Context Protocol) server interfaces.
@@ -66,12 +75,13 @@ This is a BigQuery metadata API server that provides access to BigQuery dataset,
 **Configuration**: Uses environment variables for GCP authentication and project configuration. Check `repositories/config.py` for available settings.
 
 ### MCP Server Usage
-The MCP server (`mcp_server.py`) is the primary interface, providing five main tools for BigQuery metadata access and query execution:
+The MCP server (`mcp_server.py`) is the primary interface, providing six main tools for BigQuery metadata access and query execution:
 1. `get_datasets` - Lists all available datasets across configured projects
 2. `get_tables` - Lists tables in a specific dataset (requires dataset_id, optional project_id)
 3. `search_metadata` - Searches across datasets, tables, and columns using keywords
 4. `check_query_scan_amount` - Dry-run to check query cost before execution
 5. `execute_query` - Executes BigQuery SQL with automatic safety checks and LIMIT clause management
+6. `save_query_result` - Executes BigQuery SQL and saves results to local file (CSV or JSONL format)
 
 **Query Execution Features:**
 - Automatic LIMIT clause addition/modification (default: 10 rows)
@@ -79,6 +89,13 @@ The MCP server (`mcp_server.py`) is the primary interface, providing five main t
 - Cost control with configurable scan limits (default: 1GB)
 - Safety checks to prevent dangerous SQL operations (DELETE, DROP, etc.)
 - Detailed execution results with resource usage information
+
+**File Export Features (save_query_result):**
+- Supports CSV and JSONL output formats
+- Automatic path validation and security checks to prevent path traversal attacks
+- Handles BigQuery data types (DATETIME, TIMESTAMP, nested structures)
+- Configurable CSV header inclusion
+- File size reporting and execution time tracking
 
 **Configuration Environment Variables:**
 - `MAX_SCAN_BYTES` - Maximum allowed scan bytes for queries (default: 1GB)

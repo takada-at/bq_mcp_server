@@ -21,6 +21,37 @@ Google Cloud BigQueryのデータセット、テーブル、スキーマ情報�
 3. `search_metadata` - データセット、テーブル、カラムのメタデータを検索
 4. `execute_query` - BigQuery SQLクエリを安全に実行（自動LIMIT付与、コスト制御付き）
 5. `check_query_scan_amount` - BigQuery SQLのスキャン量を取得
+6. `save_query_result` - BigQuery SQLクエリを実行し、その結果をローカルファイル（CSVまたはJSONL形式）に保存する
+
+### ツール詳細
+
+#### `save_query_result`
+
+`save_query_result` ツールは、ファイル出力機能を備えた高度なクエリ実行機能を提供する：
+
+**パラメータ:**
+- `sql`（必須）: 実行するSQLクエリ
+- `output_path`（必須）: 結果を保存するローカルファイルパス
+- `format`（オプション）: 出力形式 - `"csv"`（デフォルト）または `"jsonl"`
+- `project_id`（オプション）: 対象のGCPプロジェクトID
+- `include_header`（オプション）: CSV出力時にヘッダー行を含めるかどうか（デフォルト: true）
+
+**主な特徴:**
+- **自動LIMIT処理なし**: `execute_query` とは異なり、このツールはSQLクエリに自動的にLIMIT句を追加しない
+- **コスト管理**: スキャン量の上限（デフォルト: 1GB）を維持し、高額なクエリを防ぐための安全チェックを実装
+- **セキュリティ**: パス検証によりディレクトリトラバーサル攻撃を防止
+- **柔軟な出力形式**: CSVとJSONLの両方の出力形式をサポート
+- **大規模データセット対応**: スキャン量制限内で効率的に大規模クエリ結果を処理可能
+
+**使用例:**
+```sql
+-- LIMIT制限なしで全行をエクスポート（ただしスキャン量制限の対象）
+SELECT customer_id, order_date, total_amount 
+FROM `project.dataset.orders` 
+WHERE order_date >= '2024-01-01'
+```
+
+**注意:** このツールはLIMIT句を追加しないが、コスト保護のためスキャン量制限は適用される。設定された上限値（デフォルト: 1GB）を超えるスキャン量を必要とするクエリは拒否される。
 
 ## インストールと環境設定
 

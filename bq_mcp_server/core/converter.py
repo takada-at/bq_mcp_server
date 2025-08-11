@@ -6,6 +6,7 @@ from bq_mcp_server.core.entities import (
     DatasetMetadata,
     QueryDryRunResult,
     QueryExecutionResult,
+    QuerySaveResult,
     SearchResultItem,
     TableMetadata,
 )
@@ -353,5 +354,34 @@ def convert_dry_run_result_to_markdown(
 - **Bytes to be Billed**: {bill_size} ({result.total_bytes_billed or 0:,} bytes)
 
 {_create_safety_assessment_section(result)}"""
+
+    return markdown_content
+
+
+def convert_save_result_to_markdown(result: QuerySaveResult) -> str:
+    """Convert query save result to markdown format"""
+    if result.success:
+        # Success case
+        file_size = _format_bytes(result.file_size_bytes)
+        processed_bytes = ""
+        if result.query_bytes_processed is not None:
+            processed_bytes = f"- **Data Processed**: {_format_bytes(result.query_bytes_processed)} ({result.query_bytes_processed:,} bytes)\n"
+
+        markdown_content = f"""# Query Result Saved Successfully
+
+- **File Path**: `{result.output_path}`
+- **Format**: {result.format.upper()}
+- **Rows Saved**: {result.total_rows:,}
+- **File Size**: {file_size} ({result.file_size_bytes:,} bytes)
+- **Execution Time**: {result.execution_time_ms:,} ms
+{processed_bytes}"""
+    else:
+        # Error case
+        markdown_content = f"""# Query Result Save Failed
+
+- **Error**: {result.error_message}
+- **Output Path**: `{result.output_path}`
+- **Format**: {result.format.upper()}
+- **Execution Time**: {result.execution_time_ms:,} ms"""
 
     return markdown_content

@@ -1,3 +1,12 @@
+## 0.2.0 - 2025-08-11
+### Added
+- **New MCP tool: `save_query_result`** - Execute BigQuery SQL queries and save results to local files
+  - Support for CSV and JSONL output formats
+  - No automatic LIMIT clause insertion (unlike `execute_query`)
+  - Path validation for security (prevents directory traversal attacks)
+  - Maintains cost control with scan amount limits (default: 1GB)
+  - Configurable CSV header inclusion
+
 ## 0.1.4 - 2025-08-09
 ### Fix
 - Supports mcp library version 1.12.3 and above. Removes the description parameter.
