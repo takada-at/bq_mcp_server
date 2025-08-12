@@ -148,12 +148,12 @@ class QueryExecutor:
         start_time = time.time()
         self.logger.info(f"Starting query execution: {sql[:100]}...")
 
-        try:
-            # Track LIMIT information
-            original_limit = QueryParser.get_limit_value(sql)
-            limit_was_modified = False
-            applied_limit = None
+        # Initialize LIMIT tracking variables with defaults
+        original_limit = QueryParser.get_limit_value(sql)
+        limit_was_modified = False
+        applied_limit = None
 
+        try:
             # Query preparation
             if skip_limit_modification:
                 # Safety check only, no LIMIT modification
@@ -277,11 +277,9 @@ class QueryExecutor:
                 execution_time_ms=execution_time_ms,
                 job_id=None,
                 error_message=error_msg,
-                original_limit=original_limit if "original_limit" in locals() else None,
-                applied_limit=applied_limit if "applied_limit" in locals() else None,
-                limit_was_modified=limit_was_modified
-                if "limit_was_modified" in locals()
-                else False,
+                original_limit=original_limit,
+                applied_limit=applied_limit,
+                limit_was_modified=limit_was_modified,
             )
 
     def format_bytes(self, bytes_count: int | float) -> str:
