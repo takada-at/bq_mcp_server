@@ -135,6 +135,16 @@ class QueryExecutionResult(BaseModel):
     )
     error_message: Optional[str] = Field(None, description="Error message")
     job_id: Optional[str] = Field(None, description="BigQuery job ID")
+    # LIMIT information fields
+    original_limit: Optional[int] = Field(
+        None, description="LIMIT value in the original query"
+    )
+    applied_limit: Optional[int] = Field(
+        None, description="LIMIT value actually applied to the query"
+    )
+    limit_was_modified: bool = Field(
+        False, description="Whether the LIMIT clause was automatically modified"
+    )
 
 
 class QuerySaveRequest(BaseModel):

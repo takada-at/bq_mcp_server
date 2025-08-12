@@ -1,3 +1,7 @@
+## 0.2.2 - 2025-08-12
+### Changed
+- Fixed to provide appropriate warnings when automatically inserting LIMIT.
+
 ## 0.2.1 - 2025-08-11
 ### Changed
 - Change the default DEFAULT_QUERY_LIMIT value(10 -> 100).
