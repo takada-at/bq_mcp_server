@@ -77,17 +77,29 @@ class QueryParser:
         """
         Add or modify LIMIT clause in SQL query
 
+        Smart behavior:
+        - If no LIMIT exists: Add the specified limit
+        - If existing LIMIT <= specified limit: Keep the existing limit
+        - If existing LIMIT > specified limit: Replace with specified limit
+
         Args:
             sql: SQL query to modify
-            limit_value: LIMIT value to set
+            limit_value: Maximum LIMIT value to allow
 
         Returns:
-            SQL query with LIMIT clause added or modified
+            SQL query with LIMIT clause added or modified appropriately
         """
         # Check if there is an existing LIMIT clause
-        if cls.has_limit_clause(sql):
-            # Replace existing LIMIT clause with new value
-            return cls.LIMIT_PATTERN.sub(f"LIMIT {limit_value}", sql)
+        existing_limit = cls.get_limit_value(sql)
+
+        if existing_limit is not None:
+            # LIMIT exists - only replace if it's larger than the specified limit
+            if existing_limit <= limit_value:
+                # Keep the smaller existing limit
+                return sql
+            else:
+                # Replace larger existing limit with the specified limit
+                return cls.LIMIT_PATTERN.sub(f"LIMIT {limit_value}", sql)
         else:
             # Add LIMIT clause at the end if there is no LIMIT clause
             # Add before semicolon if present, otherwise at the end

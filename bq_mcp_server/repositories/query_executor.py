@@ -149,6 +149,11 @@ class QueryExecutor:
         self.logger.info(f"Starting query execution: {sql[:100]}...")
 
         try:
+            # Track LIMIT information
+            original_limit = QueryParser.get_limit_value(sql)
+            limit_was_modified = False
+            applied_limit = None
+
             # Query preparation
             if skip_limit_modification:
                 # Safety check only, no LIMIT modification
@@ -156,9 +161,12 @@ class QueryExecutor:
                 if not is_safe:
                     raise HTTPException(status_code=400, detail=error_msg)
                 modified_sql = sql  # Use original SQL without modification
+                applied_limit = original_limit
             else:
                 # Safety check + LIMIT clause modification (default behavior)
                 modified_sql = self._validate_and_prepare_query(sql)
+                applied_limit = QueryParser.get_limit_value(modified_sql)
+                limit_was_modified = original_limit != applied_limit
 
             # Dry run check (only when force_execute is False)
             if not force_execute:
@@ -176,6 +184,9 @@ class QueryExecutor:
                         execution_time_ms=execution_time_ms,
                         job_id=None,
                         error_message=dry_run_result.error_message,
+                        original_limit=original_limit,
+                        applied_limit=applied_limit,
+                        limit_was_modified=limit_was_modified,
                     )
 
                 # If dry run is successful but scan amount exceeds limit
@@ -194,6 +205,9 @@ class QueryExecutor:
                             f"Expected scan amount: {dry_run_result.total_bytes_processed:,} bytes, "
                             f"Limit: {self.settings.max_scan_bytes:,} bytes"
                         ),
+                        original_limit=original_limit,
+                        applied_limit=applied_limit,
+                        limit_was_modified=limit_was_modified,
                     )
 
             client = self._get_client(project_id)
@@ -240,6 +254,9 @@ class QueryExecutor:
                 execution_time_ms=execution_time_ms,
                 job_id=query_job.job_id,
                 error_message=None,
+                original_limit=original_limit,
+                applied_limit=applied_limit,
+                limit_was_modified=limit_was_modified,
             )
 
         except HTTPException:
@@ -260,6 +277,11 @@ class QueryExecutor:
                 execution_time_ms=execution_time_ms,
                 job_id=None,
                 error_message=error_msg,
+                original_limit=original_limit if "original_limit" in locals() else None,
+                applied_limit=applied_limit if "applied_limit" in locals() else None,
+                limit_was_modified=limit_was_modified
+                if "limit_was_modified" in locals()
+                else False,
             )
 
     def format_bytes(self, bytes_count: int | float) -> str:

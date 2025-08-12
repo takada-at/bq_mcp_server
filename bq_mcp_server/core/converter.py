@@ -251,11 +251,30 @@ def _create_resource_usage_section(result) -> str:
     scan_size = _format_bytes(result.total_bytes_processed or 0)
     bill_size = _format_bytes(result.total_bytes_billed or 0)
 
-    return f"""## Resource Usage
+    usage_section = f"""## Resource Usage
 - **Bytes Processed**: {scan_size} ({result.total_bytes_processed or 0:,} bytes)
 - **Bytes Billed**: {bill_size} ({result.total_bytes_billed or 0:,} bytes)
 - **Rows Returned**: {result.total_rows or 0:,}
 """
+
+    # Add LIMIT notification if applicable
+    if (
+        hasattr(result, "limit_was_modified")
+        and result.limit_was_modified
+        and hasattr(result, "applied_limit")
+        and result.applied_limit is not None
+        and result.total_rows == result.applied_limit
+    ):
+        original_info = ""
+        if hasattr(result, "original_limit") and result.original_limit is not None:
+            original_info = f", original LIMIT was {result.original_limit}"
+
+        usage_section += f"""
+⚠️ **Note**: The results may be limited by automatic LIMIT insertion ({result.applied_limit} rows{original_info}).
+If you want to retrieve more results, use `save_query_result` to save them to a file.
+"""
+
+    return usage_section
 
 
 def _create_error_section(error_message: str | None) -> str:
